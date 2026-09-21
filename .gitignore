@@ -1,0 +1,25 @@
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+
+# node
+node_modules/
+.next/
+out/
+npm-debug.log*
+
+# env
+.env
+.env.local
+
+# editors / os
+.DS_Store
+.idea/
+*.swp
+
+full-stack-task.pdf
