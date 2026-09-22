@@ -3,10 +3,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.cookies import set_auth_cookies
-from app.core.security import create_access_token, new_refresh_token, verify_password
+from app.core.security import create_access_token, verify_password
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import LoginRequest, UserOut
+from app.services.auth import issue_refresh_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -22,5 +23,6 @@ def login(payload: LoginRequest, response: Response, db: Session = Depends(get_d
     if not user.is_active:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "This account has been disabled")
 
-    set_auth_cookies(response, create_access_token(user.id, user.role), new_refresh_token())
+    access = create_access_token(user.id, user.role)
+    set_auth_cookies(response, access, issue_refresh_token(db, user))
     return user
