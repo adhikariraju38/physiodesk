@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     access_token_minutes: int = 15
     refresh_token_days: int = 14
 
+    # local dev is plain http, turn this on once there is tls in front
+    cookie_secure: bool = False
+
     # where the next.js app runs, needed for credentialed CORS
     frontend_origin: str = "http://localhost:3000"
 
