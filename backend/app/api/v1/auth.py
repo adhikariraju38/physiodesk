@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, HTTPException, Response, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
+from app.api.deps import CurrentUser, DbSession
 from app.core.cookies import REFRESH_COOKIE, clear_auth_cookies, set_auth_cookies
 from app.core.security import create_access_token, verify_password
-from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import LoginRequest, UserOut
 from app.services.auth import (
@@ -22,7 +21,7 @@ RefreshCookie = Cookie(default=None, alias=REFRESH_COOKIE)
 
 
 @router.post("/login", response_model=UserOut)
-def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)) -> User:
+def login(payload: LoginRequest, response: Response, db: DbSession) -> User:
     user = db.scalar(select(User).where(User.email == payload.email.lower()))
 
     # same error for an unknown email and a wrong password, otherwise the
@@ -40,7 +39,7 @@ def login(payload: LoginRequest, response: Response, db: Session = Depends(get_d
 @router.post("/refresh", response_model=UserOut)
 def refresh(
     response: Response,
-    db: Session = Depends(get_db),
+    db: DbSession,
     refresh_token: str | None = RefreshCookie,
 ) -> User:
     if not refresh_token:
@@ -60,7 +59,7 @@ def refresh(
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(
     response: Response,
-    db: Session = Depends(get_db),
+    db: DbSession,
     refresh_token: str | None = RefreshCookie,
 ) -> None:
     if refresh_token:
@@ -71,9 +70,14 @@ def logout(
 @router.post("/logout-all", status_code=status.HTTP_204_NO_CONTENT)
 def logout_everywhere(
     response: Response,
-    db: Session = Depends(get_db),
+    db: DbSession,
     refresh_token: str | None = RefreshCookie,
 ) -> None:
     if refresh_token:
         revoke_family(db, refresh_token)
     clear_auth_cookies(response)
+
+
+@router.get("/me", response_model=UserOut)
+def me(user: CurrentUser) -> User:
+    return user
