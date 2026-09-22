@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     database_url: str = "postgresql+psycopg://physiodesk:physiodesk@localhost:5433/physiodesk"
-    secret_key: str = "dev-secret-change-me"
+    secret_key: str = "dev-only-secret-not-for-anything-real-0000"
 
     access_token_minutes: int = 15
     refresh_token_days: int = 14
