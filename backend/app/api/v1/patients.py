@@ -1,10 +1,10 @@
-from collections.abc import Sequence
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import func, or_, select
 
 from app.api.deps import CurrentUser, DbSession
+from app.core.pagination import Page, Paging, paginate
 from app.models.enums import InvoiceStatus, PatientStatus
 from app.models.invoice import Invoice
 from app.models.patient import Patient
@@ -38,14 +38,15 @@ def like_term(raw: str) -> str:
     return f"%{escaped}%"
 
 
-@router.get("", response_model=list[PatientOut])
+@router.get("", response_model=Page[PatientOut])
 def list_patients(
     db: DbSession,
     user: CurrentUser,
+    paging: Paging,
     search: Annotated[str | None, Query(max_length=80)] = None,
     # aliased because `status` is already the fastapi status module in here
     status_filter: Annotated[PatientStatus | None, Query(alias="status")] = None,
-) -> Sequence[Patient]:
+) -> Page[Any]:
     stmt = select(Patient).order_by(Patient.created_at.desc())
 
     if search:
@@ -54,9 +55,7 @@ def list_patients(
     if status_filter is not None:
         stmt = stmt.where(Patient.status == status_filter)
 
-    # unique() because the assigned therapist is joined eagerly and would
-    # otherwise duplicate rows
-    return db.scalars(stmt).unique().all()
+    return paginate(db, stmt, paging)
 
 
 @router.post("", response_model=PatientOut, status_code=status.HTTP_201_CREATED)
