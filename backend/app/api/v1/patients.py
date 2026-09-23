@@ -1,10 +1,11 @@
 from collections.abc import Sequence
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import func, select
+from fastapi import APIRouter, HTTPException, Query, status
+from sqlalchemy import func, or_, select
 
 from app.api.deps import CurrentUser, DbSession
-from app.models.enums import InvoiceStatus
+from app.models.enums import InvoiceStatus, PatientStatus
 from app.models.invoice import Invoice
 from app.models.patient import Patient
 from app.models.therapist import Therapist
@@ -28,9 +29,31 @@ def check_therapist(db: DbSession, therapist_id: int | None) -> None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "That therapist does not exist")
 
 
+def like_term(raw: str) -> str:
+    """Wrap a search box value for ILIKE, escaping the wildcards first.
+
+    Without this a patient typing % into the search box matches every row.
+    """
+    escaped = raw.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
 @router.get("", response_model=list[PatientOut])
-def list_patients(db: DbSession, user: CurrentUser) -> Sequence[Patient]:
+def list_patients(
+    db: DbSession,
+    user: CurrentUser,
+    search: Annotated[str | None, Query(max_length=80)] = None,
+    # aliased because `status` is already the fastapi status module in here
+    status_filter: Annotated[PatientStatus | None, Query(alias="status")] = None,
+) -> Sequence[Patient]:
     stmt = select(Patient).order_by(Patient.created_at.desc())
+
+    if search:
+        term = like_term(search)
+        stmt = stmt.where(or_(Patient.full_name.ilike(term), Patient.phone.ilike(term)))
+    if status_filter is not None:
+        stmt = stmt.where(Patient.status == status_filter)
+
     # unique() because the assigned therapist is joined eagerly and would
     # otherwise duplicate rows
     return db.scalars(stmt).unique().all()
