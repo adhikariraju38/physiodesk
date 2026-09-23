@@ -18,6 +18,20 @@ class PatientCreate(BaseModel):
     status: PatientStatus = PatientStatus.active
 
 
+class PatientUpdate(BaseModel):
+    """Every field optional, this is a PATCH and the UI sends partial forms."""
+
+    full_name: str | None = Field(default=None, min_length=2, max_length=120)
+    phone: str | None = Field(default=None, min_length=6, max_length=32)
+    age: int | None = Field(default=None, ge=0, le=120)
+    gender: Gender | None = None
+    address: str | None = Field(default=None, max_length=255)
+    condition: str | None = Field(default=None, min_length=2, max_length=160)
+    package: str | None = Field(default=None, max_length=80)
+    assigned_therapist_id: int | None = None
+    status: PatientStatus | None = None
+
+
 class PatientOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
