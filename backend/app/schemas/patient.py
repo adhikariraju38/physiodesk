@@ -6,6 +6,16 @@ from app.models.enums import Gender, PatientStatus
 from app.schemas.therapist import TherapistBrief
 
 
+class PatientBrief(BaseModel):
+    """Just enough to label a patient inside an appointment or an invoice."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    full_name: str
+    phone: str
+
+
 class PatientCreate(BaseModel):
     full_name: str = Field(min_length=2, max_length=120)
     phone: str = Field(min_length=6, max_length=32)
