@@ -16,6 +16,17 @@ class AppointmentCreate(BaseModel):
     notes: str | None = Field(default=None, max_length=2000)
 
 
+class AppointmentUpdate(BaseModel):
+    """Moving any of therapist, date or time counts as a reschedule."""
+
+    therapist_id: int | None = None
+    appt_date: date | None = None
+    start_time: time | None = None
+    status: AppointmentStatus | None = None
+    payment_method: PaymentMethod | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+
+
 class AppointmentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

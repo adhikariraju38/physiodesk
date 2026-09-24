@@ -11,10 +11,12 @@ from app.models.appointment import Appointment
 from app.models.enums import AppointmentStatus
 from app.models.patient import Patient
 from app.models.therapist import Therapist
-from app.schemas.appointment import AppointmentCreate, AppointmentOut
+from app.schemas.appointment import AppointmentCreate, AppointmentOut, AppointmentUpdate
 from app.services.scheduling import add_minutes
 
 router = APIRouter(prefix="/appointments", tags=["appointments"])
+
+RESCHEDULE_FIELDS = {"therapist_id", "appt_date", "start_time"}
 
 
 def get_appointment_or_404(db: DbSession, appointment_id: int) -> Appointment:
@@ -22,6 +24,46 @@ def get_appointment_or_404(db: DbSession, appointment_id: int) -> Appointment:
     if appointment is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Appointment not found")
     return appointment
+
+
+def get_bookable_therapist(db: DbSession, therapist_id: int) -> Therapist:
+    therapist = db.get(Therapist, therapist_id)
+    if therapist is None or not therapist.is_active:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That therapist is not available")
+    return therapist
+
+
+def taken_message(therapist: Therapist) -> str:
+    return f"{therapist.full_name} is already booked at that time"
+
+
+def assert_slot_free(
+    db: DbSession,
+    therapist: Therapist,
+    appt_date: date,
+    start_time: object,
+    exclude_id: int | None = None,
+) -> None:
+    stmt = select(Appointment).where(
+        Appointment.therapist_id == therapist.id,
+        Appointment.appt_date == appt_date,
+        Appointment.start_time == start_time,
+        Appointment.status != AppointmentStatus.cancelled,
+    )
+    if exclude_id is not None:
+        stmt = stmt.where(Appointment.id != exclude_id)
+
+    if db.scalar(stmt) is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, taken_message(therapist))
+
+
+def commit_or_conflict(db: DbSession, therapist: Therapist) -> None:
+    """Commit, turning a slot collision from the unique index into a clean 409."""
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, taken_message(therapist)) from exc
 
 
 @router.get("", response_model=list[AppointmentOut])
@@ -52,27 +94,11 @@ def list_appointments(
 
 @router.post("", response_model=AppointmentOut, status_code=status.HTTP_201_CREATED)
 def book_appointment(payload: AppointmentCreate, db: DbSession, user: CurrentUser) -> Appointment:
-    patient = db.get(Patient, payload.patient_id)
-    if patient is None:
+    if db.get(Patient, payload.patient_id) is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "That patient does not exist")
 
-    therapist = db.get(Therapist, payload.therapist_id)
-    if therapist is None or not therapist.is_active:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That therapist is not available")
-
-    clash = db.scalar(
-        select(Appointment).where(
-            Appointment.therapist_id == payload.therapist_id,
-            Appointment.appt_date == payload.appt_date,
-            Appointment.start_time == payload.start_time,
-            Appointment.status != AppointmentStatus.cancelled,
-        )
-    )
-    if clash:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            f"{therapist.full_name} is already booked at that time",
-        )
+    therapist = get_bookable_therapist(db, payload.therapist_id)
+    assert_slot_free(db, therapist, payload.appt_date, payload.start_time)
 
     appointment = Appointment(
         patient_id=payload.patient_id,
@@ -86,16 +112,7 @@ def book_appointment(payload: AppointmentCreate, db: DbSession, user: CurrentUse
         created_by_user_id=user.id,
     )
     db.add(appointment)
-    try:
-        db.commit()
-    except IntegrityError as exc:
-        # another request got the same slot in between our check and our commit
-        db.rollback()
-        raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            f"{therapist.full_name} is already booked at that time",
-        ) from exc
-
+    commit_or_conflict(db, therapist)
     db.refresh(appointment)
     return appointment
 
@@ -103,3 +120,46 @@ def book_appointment(payload: AppointmentCreate, db: DbSession, user: CurrentUse
 @router.get("/{appointment_id}", response_model=AppointmentOut)
 def get_appointment(appointment_id: int, db: DbSession, user: CurrentUser) -> Appointment:
     return get_appointment_or_404(db, appointment_id)
+
+
+@router.patch("/{appointment_id}", response_model=AppointmentOut)
+def update_appointment(
+    appointment_id: int, payload: AppointmentUpdate, db: DbSession, user: CurrentUser
+) -> Appointment:
+    appointment = get_appointment_or_404(db, appointment_id)
+    changes = payload.model_dump(exclude_unset=True)
+
+    moving = RESCHEDULE_FIELDS & changes.keys()
+    if moving and appointment.status is AppointmentStatus.cancelled:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "This appointment was cancelled, book a new one instead of moving it",
+        )
+
+    for field, value in changes.items():
+        setattr(appointment, field, value)
+
+    therapist = get_bookable_therapist(db, appointment.therapist_id)
+
+    if moving:
+        # the slot length can differ between therapists, so recalculate the end
+        appointment.end_time = add_minutes(appointment.start_time, therapist.slot_duration_min)
+        assert_slot_free(
+            db,
+            therapist,
+            appointment.appt_date,
+            appointment.start_time,
+            exclude_id=appointment.id,
+        )
+
+    commit_or_conflict(db, therapist)
+    db.refresh(appointment)
+    return appointment
+
+
+@router.delete("/{appointment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def cancel_appointment(appointment_id: int, db: DbSession, user: CurrentUser) -> None:
+    """Cancel rather than delete, the session still belongs in the patient's history."""
+    appointment = get_appointment_or_404(db, appointment_id)
+    appointment.status = AppointmentStatus.cancelled
+    db.commit()
