@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import CurrentUser, DbSession
 from app.models.appointment import Appointment
@@ -85,7 +86,16 @@ def book_appointment(payload: AppointmentCreate, db: DbSession, user: CurrentUse
         created_by_user_id=user.id,
     )
     db.add(appointment)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        # another request got the same slot in between our check and our commit
+        db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"{therapist.full_name} is already booked at that time",
+        ) from exc
+
     db.refresh(appointment)
     return appointment
 

@@ -1,6 +1,6 @@
 from datetime import date, time
 
-from sqlalchemy import Date, ForeignKey, Text, Time
+from sqlalchemy import Date, ForeignKey, Index, Text, Time, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -11,6 +11,19 @@ from app.models.therapist import Therapist
 
 class Appointment(Base, TimestampMixin):
     __tablename__ = "appointments"
+    __table_args__ = (
+        # the service layer checks for a clash first, but two requests can both
+        # pass that check before either one commits. this is the backstop.
+        # cancelled rows are excluded so a freed slot can be booked again.
+        Index(
+            "uq_appointment_slot",
+            "therapist_id",
+            "appt_date",
+            "start_time",
+            unique=True,
+            postgresql_where=text("status <> 'cancelled'"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     patient_id: Mapped[int] = mapped_column(ForeignKey("patients.id", ondelete="CASCADE"))
