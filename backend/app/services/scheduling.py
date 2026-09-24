@@ -68,6 +68,11 @@ def build_slots(hours: DayHours) -> list[Slot]:
     return slots
 
 
+def add_minutes(start: time, minutes: int) -> time:
+    """Shift a wall clock time forward. Wrapping past midnight is not a case we have."""
+    return (datetime.combine(date.min, start) + timedelta(minutes=minutes)).time()
+
+
 def day_slots(
     therapist: Therapist, day: date, override: TherapistOverride | None
 ) -> list[Slot] | None:
