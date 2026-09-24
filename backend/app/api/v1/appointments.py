@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from datetime import date
+from datetime import date, time
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -10,9 +10,9 @@ from app.api.deps import CurrentUser, DbSession
 from app.models.appointment import Appointment
 from app.models.enums import AppointmentStatus
 from app.models.patient import Patient
-from app.models.therapist import Therapist
+from app.models.therapist import Therapist, TherapistOverride
 from app.schemas.appointment import AppointmentCreate, AppointmentOut, AppointmentUpdate
-from app.services.scheduling import add_minutes
+from app.services.scheduling import add_minutes, day_slots
 
 router = APIRouter(prefix="/appointments", tags=["appointments"])
 
@@ -41,7 +41,7 @@ def assert_slot_free(
     db: DbSession,
     therapist: Therapist,
     appt_date: date,
-    start_time: object,
+    start_time: time,
     exclude_id: int | None = None,
 ) -> None:
     stmt = select(Appointment).where(
@@ -55,6 +55,35 @@ def assert_slot_free(
 
     if db.scalar(stmt) is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, taken_message(therapist))
+
+
+def assert_therapist_is_working(
+    db: DbSession, therapist: Therapist, appt_date: date, start_time: time
+) -> None:
+    """Refuse anything that is not a real slot on that therapist's day.
+
+    Without this you can book someone at 3am, or on a day they are off, just by
+    posting the time straight to the api instead of clicking the grid.
+    """
+    override = db.scalar(
+        select(TherapistOverride).where(
+            TherapistOverride.therapist_id == therapist.id,
+            TherapistOverride.on_date == appt_date,
+        )
+    )
+    slots = day_slots(therapist, appt_date, override)
+
+    if slots is None:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            f"{therapist.full_name} is not working on {appt_date:%d %b %Y}",
+        )
+
+    if not any(slot.start == start_time for slot in slots):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            f"{start_time:%H:%M} is not one of {therapist.full_name}'s slots that day",
+        )
 
 
 def commit_or_conflict(db: DbSession, therapist: Therapist) -> None:
@@ -98,6 +127,7 @@ def book_appointment(payload: AppointmentCreate, db: DbSession, user: CurrentUse
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "That patient does not exist")
 
     therapist = get_bookable_therapist(db, payload.therapist_id)
+    assert_therapist_is_working(db, therapist, payload.appt_date, payload.start_time)
     assert_slot_free(db, therapist, payload.appt_date, payload.start_time)
 
     appointment = Appointment(
@@ -144,6 +174,7 @@ def update_appointment(
     if moving:
         # the slot length can differ between therapists, so recalculate the end
         appointment.end_time = add_minutes(appointment.start_time, therapist.slot_duration_min)
+        assert_therapist_is_working(db, therapist, appointment.appt_date, appointment.start_time)
         assert_slot_free(
             db,
             therapist,
