@@ -9,8 +9,10 @@ from app.db.base import Base
 
 config = context.config
 
-# the url lives in one place, app settings, rather than being duplicated in alembic.ini
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# normally the url comes from app settings rather than being duplicated in
+# alembic.ini, but the test harness sets it first to point at a scratch database
+if not config.get_main_option("sqlalchemy.url", None):
+    config.set_main_option("sqlalchemy.url", settings.database_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
