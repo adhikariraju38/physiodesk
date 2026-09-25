@@ -3,6 +3,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import AdminUser, CurrentUser, DbSession
 from app.core.pagination import Page, Paging, paginate
@@ -55,7 +56,6 @@ def create_invoice(payload: InvoiceCreate, db: DbSession, admin: AdminUser) -> I
             )
 
     invoice = Invoice(
-        invoice_number=next_invoice_number(db),
         patient_id=payload.patient_id,
         appointment_id=payload.appointment_id,
         service=payload.service,
@@ -68,10 +68,23 @@ def create_invoice(payload: InvoiceCreate, db: DbSession, admin: AdminUser) -> I
         paid_at=datetime.now(UTC) if payload.status is InvoiceStatus.paid else None,
         created_by_user_id=admin.id,
     )
-    db.add(invoice)
-    db.commit()
-    db.refresh(invoice)
-    return invoice
+    # the number is picked from what is already in the table, so two invoices
+    # raised at the same moment can land on the same one. retry rather than
+    # failing the request.
+    for _ in range(3):
+        invoice.invoice_number = next_invoice_number(db, invoice.issued_date)
+        db.add(invoice)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            continue
+        db.refresh(invoice)
+        return invoice
+
+    raise HTTPException(
+        status.HTTP_409_CONFLICT, "Could not allocate an invoice number, please try again"
+    )
 
 
 @router.get("/{invoice_id}", response_model=InvoiceOut)
