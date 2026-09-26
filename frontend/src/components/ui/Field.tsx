@@ -7,7 +7,12 @@ const CONTROL = cn(
   "disabled:bg-background disabled:text-muted",
 );
 
-type Wrapper = { label?: string; error?: string; hint?: string; className?: string };
+type Wrapper = {
+  label?: string;
+  error?: string;
+  hint?: string;
+  className?: string;
+};
 
 function Shell({
   label,

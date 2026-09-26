@@ -20,7 +20,10 @@ export class ApiError extends Error {
 let refreshing: Promise<boolean> | null = null;
 
 function refreshSession(): Promise<boolean> {
-  refreshing ??= fetch(`${BASE}/auth/refresh`, { method: "POST", credentials: "include" })
+  refreshing ??= fetch(`${BASE}/auth/refresh`, {
+    method: "POST",
+    credentials: "include",
+  })
     .then((response) => response.ok)
     .catch(() => false)
     .finally(() => {
