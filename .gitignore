@@ -23,3 +23,5 @@ npm-debug.log*
 *.swp
 
 full-stack-task.pdf
+next-env.d.ts
+tsconfig.tsbuildinfo
