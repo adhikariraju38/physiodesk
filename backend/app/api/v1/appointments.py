@@ -75,13 +75,13 @@ def assert_therapist_is_working(
 
     if slots is None:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             f"{therapist.full_name} is not working on {appt_date:%d %b %Y}",
         )
 
     if not any(slot.start == start_time for slot in slots):
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             f"{start_time:%H:%M} is not one of {therapist.full_name}'s slots that day",
         )
 

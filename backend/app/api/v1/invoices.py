@@ -107,7 +107,7 @@ def update_invoice(
 
     if invoice.discount > invoice.amount:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "discount cannot be larger than the amount"
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "discount cannot be larger than the amount"
         )
     invoice.total = line_total(invoice.amount, invoice.discount)
 

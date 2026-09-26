@@ -6,6 +6,7 @@ than whatever create_all happens to produce. Tables are emptied between tests.
 """
 
 from collections.abc import Iterator
+from datetime import time
 
 import pytest
 from alembic.config import Config
@@ -19,7 +20,9 @@ from app.core.config import settings
 from app.core.security import hash_password
 from app.db.session import get_db
 from app.main import app
-from app.models.enums import UserRole
+from app.models.enums import Gender, UserRole
+from app.models.patient import Patient
+from app.models.therapist import Therapist, TherapistWorkingDay
 from app.models.user import User
 from app.seed import TABLES
 
@@ -102,3 +105,34 @@ def sign_in(client: TestClient, email: str, password: str) -> None:
     """Log in and leave the cookies on the client for the rest of the test."""
     response = client.post("/api/v1/auth/login", json={"email": email, "password": password})
     assert response.status_code == 200, response.text
+
+
+@pytest.fixture
+def therapist(db: Session) -> Therapist:
+    """Works every day, so a test can pick any date without it being a day off."""
+    row = Therapist(
+        full_name="Dr Anjali Gurung",
+        specialty="Musculoskeletal physio",
+        start_time=time(9),
+        end_time=time(12),
+        slot_duration_min=60,
+        working_days=[TherapistWorkingDay(weekday=day) for day in range(7)],
+    )
+    db.add(row)
+    db.commit()
+    return row
+
+
+@pytest.fixture
+def patient(db: Session, therapist: Therapist) -> Patient:
+    row = Patient(
+        full_name="Anita Shrestha",
+        phone="9841002211",
+        age=41,
+        gender=Gender.female,
+        condition="Frozen shoulder",
+        assigned_therapist_id=therapist.id,
+    )
+    db.add(row)
+    db.commit()
+    return row

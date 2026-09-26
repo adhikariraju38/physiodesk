@@ -82,7 +82,7 @@ def update_therapist(
     # run against the merged values rather than the payload
     if therapist.start_time >= therapist.end_time:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "start_time must be earlier than end_time"
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "start_time must be earlier than end_time"
         )
 
     db.commit()
