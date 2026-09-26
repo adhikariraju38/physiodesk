@@ -30,7 +30,7 @@ class Page[T](BaseModel):
     pages: int
 
 
-def paginate(db: Session, stmt: Select, params: PageParams) -> Page[Any]:
+def paginate(db: Session, stmt: Select[Any], params: PageParams) -> Page[Any]:
     """Run a select twice: once for the count, once for the requested slice."""
     # order_by(None) because postgres will not let you order by a column that
     # is not selected once the statement is wrapped in count()

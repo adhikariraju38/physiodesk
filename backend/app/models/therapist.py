@@ -32,6 +32,11 @@ class Therapist(Base, TimestampMixin):
         cascade="all, delete-orphan",
     )
 
+    @property
+    def weekday_numbers(self) -> list[int]:
+        """Working days as plain ints, which is the shape the api hands out."""
+        return sorted(row.weekday for row in self.working_days)
+
 
 class TherapistWorkingDay(Base):
     """Which days of the week a therapist normally comes in."""

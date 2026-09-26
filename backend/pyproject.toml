@@ -1,8 +1,14 @@
+[project]
+name = "physiodesk-api"
+version = "0.1.0"
+requires-python = ">=3.12"
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-# alembic writes these, not me
-exclude = ["alembic/versions"]
+# extend-, not plain exclude: the plain one drops ruff's own defaults and it
+# starts linting .venv
+extend-exclude = ["alembic/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
@@ -10,3 +16,13 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+# the api runs on 3.12, say so or editors fall back to an older default and
+# flag the pep 695 generics as a syntax error
+pythonVersion = "3.12"
+include = ["app", "tests"]
+exclude = ["alembic"]
+# third party packages here ship types but not stubs, and chasing those is noise
+reportMissingTypeStubs = false

@@ -3,6 +3,7 @@
 import pytest
 from starlette.testclient import TestClient
 
+from app.models.patient import Patient
 from app.models.therapist import Therapist
 from app.models.user import User
 from tests.conftest import sign_in
@@ -29,7 +30,9 @@ def test_staff_can_read_but_not_write_therapists(
     assert client.delete(f"/api/v1/therapists/{therapist.id}").status_code == 403
 
 
-def test_staff_can_read_but_not_write_billing(client: TestClient, staff: User, patient) -> None:
+def test_staff_can_read_but_not_write_billing(
+    client: TestClient, staff: User, patient: Patient
+) -> None:
     sign_in(client, staff.email, "staff123")
     invoice = {"patient_id": patient.id, "service": "Initial assessment", "amount": "1500.00"}
 
@@ -58,7 +61,7 @@ def test_staff_still_runs_the_front_desk(
 
 @pytest.mark.parametrize("path", ["/api/v1/therapists", "/api/v1/invoices"])
 def test_admin_may_write_where_staff_may_not(
-    client: TestClient, admin: User, patient, path: str
+    client: TestClient, admin: User, patient: Patient, path: str
 ) -> None:
     sign_in(client, admin.email, "admin123")
 

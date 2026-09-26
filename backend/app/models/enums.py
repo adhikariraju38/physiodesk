@@ -40,6 +40,10 @@ class InvoiceStatus(enum.StrEnum):
     void = "void"
 
 
+def member_values(enum_cls: type[enum.Enum]) -> list[str]:
+    return [str(member.value) for member in enum_cls]
+
+
 def pg_enum(enum_cls: type[enum.Enum], name: str) -> SAEnum:
     """Postgres enum that stores the member value.
 
@@ -47,4 +51,4 @@ def pg_enum(enum_cls: type[enum.Enum], name: str) -> SAEnum:
     happens to work here because our names and values match. Being explicit
     means renaming a member later does not silently change what is in the db.
     """
-    return SAEnum(enum_cls, name=name, values_callable=lambda e: [m.value for m in e])
+    return SAEnum(enum_cls, name=name, values_callable=member_values)

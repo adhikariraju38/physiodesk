@@ -28,7 +28,10 @@ class TherapistCreate(BaseModel):
     slot_duration_min: int = Field(default=45, ge=15, le=180)
     working_days: list[int] = Field(default=[0, 1, 2, 3, 4])
 
-    _tidy_days = field_validator("working_days")(clean_weekdays)
+    @field_validator("working_days")
+    @classmethod
+    def tidy_days(cls, value: list[int]) -> list[int]:
+        return clean_weekdays(value)
 
     @model_validator(mode="after")
     def check_day_makes_sense(self) -> "TherapistCreate":
@@ -46,9 +49,10 @@ class TherapistUpdate(BaseModel):
     working_days: list[int] | None = None
     is_active: bool | None = None
 
-    _tidy_days = field_validator("working_days")(
-        lambda v: clean_weekdays(v) if v is not None else v
-    )
+    @field_validator("working_days")
+    @classmethod
+    def tidy_days(cls, value: list[int] | None) -> list[int] | None:
+        return None if value is None else clean_weekdays(value)
 
 
 class TherapistOut(BaseModel):
@@ -61,15 +65,8 @@ class TherapistOut(BaseModel):
     end_time: time
     slot_duration_min: int
     is_active: bool
-    working_days: list[int]
-
-    @field_validator("working_days", mode="before")
-    @classmethod
-    def flatten_working_days(cls, value: object) -> object:
-        # the orm hands over TherapistWorkingDay rows, the api only wants numbers
-        if isinstance(value, list) and value and not isinstance(value[0], int):
-            return sorted(row.weekday for row in value)
-        return value
+    # read off the model property, so the rows never have to be unpacked here
+    working_days: list[int] = Field(validation_alias="weekday_numbers")
 
 
 class OverrideUpsert(BaseModel):

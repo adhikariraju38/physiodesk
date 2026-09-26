@@ -23,9 +23,12 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
+# pyjwt types its key parameter as a union that includes the asymmetric key
+# classes from `cryptography`, which we do not install because everything here
+# is HS256. that leaves one arm of the union unresolved, hence the two ignores.
 def create_access_token(user_id: int, role: str) -> str:
     now = datetime.now(UTC)
-    return jwt.encode(
+    return jwt.encode(  # pyright: ignore[reportUnknownMemberType]
         {
             "sub": str(user_id),
             "role": role,
@@ -40,7 +43,9 @@ def create_access_token(user_id: int, role: str) -> str:
 def decode_access_token(token: str) -> dict[str, Any] | None:
     """Returns the claims, or None if the token is expired, tampered with or junk."""
     try:
-        return jwt.decode(token, settings.secret_key, algorithms=[JWT_ALGORITHM])
+        return jwt.decode(  # pyright: ignore[reportUnknownMemberType]
+            token, settings.secret_key, algorithms=[JWT_ALGORITHM]
+        )
     except jwt.PyJWTError:
         return None
 

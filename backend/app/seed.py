@@ -107,7 +107,7 @@ def create_users(db: Session) -> list[User]:
 
 
 def create_therapists(db: Session, today: date) -> list[Therapist]:
-    therapists = []
+    therapists: list[Therapist] = []
     for name, specialty, opens, closes, slot, weekdays in THERAPISTS:
         therapist = Therapist(
             full_name=name,
@@ -178,7 +178,9 @@ def create_appointments(
     now: datetime,
     rng: random.Random,
 ) -> list[Appointment]:
-    overrides = {(o.therapist_id, o.on_date): o for o in db.query(TherapistOverride).all()}
+    overrides: dict[tuple[int, date], TherapistOverride] = {
+        (row.therapist_id, row.on_date): row for row in db.query(TherapistOverride).all()
+    }
     appointments: list[Appointment] = []
     today = now.date()
 

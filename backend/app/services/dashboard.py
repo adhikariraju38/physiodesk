@@ -21,6 +21,7 @@ from app.schemas.dashboard import (
     DashboardSummary,
     TherapistCapacity,
 )
+from app.schemas.patient import PatientOut
 from app.schemas.therapist import TherapistBrief
 from app.services.scheduling import day_slots
 
@@ -114,5 +115,5 @@ def build_summary(db: Session, recent_limit: int = 5) -> DashboardSummary:
             open_slots_today=open_slots,
         ),
         capacity=capacity,
-        recent_patients=list(recent_patients),
+        recent_patients=[PatientOut.model_validate(row) for row in recent_patients],
     )

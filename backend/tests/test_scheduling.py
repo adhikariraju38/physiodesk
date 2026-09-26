@@ -16,7 +16,7 @@ from tests.conftest import sign_in
 TOMORROW = date.today() + timedelta(days=1)
 
 
-def booking(patient: Patient, therapist: Therapist, at: str = "09:00:00") -> dict:
+def booking(patient: Patient, therapist: Therapist, at: str = "09:00:00") -> dict[str, str | int]:
     return {
         "patient_id": patient.id,
         "therapist_id": therapist.id,
