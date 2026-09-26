@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { CapacityStrip } from "@/components/dashboard/CapacityStrip";
+import { RecentPatients } from "@/components/dashboard/RecentPatients";
 import { StatCard, StatCardSkeleton } from "@/components/dashboard/StatCard";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { api } from "@/lib/api";
@@ -56,6 +58,13 @@ export default function DashboardPage() {
             </>
           )}
         </section>
+
+        {data && (
+          <>
+            <CapacityStrip capacity={data.capacity} />
+            <RecentPatients patients={data.recent_patients} />
+          </>
+        )}
       </div>
     </>
   );
