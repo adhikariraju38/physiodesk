@@ -1,10 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect } from "react";
 
-import { api } from "@/lib/api";
+import { Spinner } from "@/components/ui/Skeleton";
+import { api, clearSessionFlag } from "@/lib/api";
+import { keys } from "@/lib/query-keys";
 import type { User } from "@/types/api";
 
 type AuthValue = {
@@ -16,25 +17,31 @@ type AuthValue = {
 const AuthContext = createContext<AuthValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-
   const { data: user, isError } = useQuery({
-    queryKey: ["me"],
+    queryKey: keys.me,
     queryFn: () => api.get<User>("/auth/me"),
     retry: false,
     staleTime: Infinity,
   });
 
-  // the api is the source of truth. if it will not tell us who we are, the
-  // cookie the middleware saw is stale.
+  // the api is the source of truth. if it will not tell us who we are then the
+  // flag cookie the middleware trusted is stale, so clear it first and leave
+  // with a full navigation, otherwise the middleware sends us straight back.
   useEffect(() => {
-    if (isError) router.replace("/login");
-  }, [isError, router]);
+    if (!isError) return;
+    clearSessionFlag();
+    window.location.href = "/login";
+  }, [isError]);
 
   if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-muted">
-        Loading…
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex min-h-screen items-center justify-center text-primary"
+      >
+        <Spinner className="h-8 w-8" />
+        <span className="sr-only">Signing you in</span>
       </div>
     );
   }
@@ -43,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await api.post("/auth/logout");
     } finally {
+      clearSessionFlag();
       // a hard navigation, so no stale query cache survives into the next session
       window.location.href = "/login";
     }

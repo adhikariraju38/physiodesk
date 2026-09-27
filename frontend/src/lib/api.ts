@@ -1,5 +1,20 @@
 const BASE = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/v1`;
 
+/**
+ * Endpoints that must never trigger a refresh retry.
+ *
+ * Only the ones that mint or burn tokens. /auth/me deliberately is not here:
+ * it is the first call the app makes, and if a 401 there did not refresh, an
+ * expired access token would leave the shell spinning forever while the
+ * middleware kept waving the user back in on the strength of the session flag.
+ */
+const NO_REFRESH = ["/auth/login", "/auth/refresh", "/auth/logout", "/auth/logout-all"];
+
+/** Not httpOnly on purpose, so the app can drop it the moment a session dies. */
+export function clearSessionFlag(): void {
+  document.cookie = "pd_session=; Max-Age=0; path=/";
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -62,8 +77,12 @@ async function request<T>(path: string, init: RequestInit = {}, canRefresh = tru
   });
 
   // one silent retry: the access token is short lived, the refresh token is not
-  if (response.status === 401 && canRefresh && !path.startsWith("/auth/")) {
+  if (response.status === 401 && canRefresh && !NO_REFRESH.includes(path)) {
     if (await refreshSession()) return request<T>(path, init, false);
+
+    // the refresh token is gone too, so the flag cookie is lying to the
+    // middleware. drop it, or it will wave the user straight back in.
+    clearSessionFlag();
   }
 
   if (!response.ok) throw new ApiError(response.status, await readError(response));
