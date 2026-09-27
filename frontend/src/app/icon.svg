@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="PhysioDesk">
+  <rect width="64" height="64" rx="15" fill="#132420" />
+  <rect x="19" y="15" width="7" height="34" rx="3.5" fill="#B8763A" />
+  <path
+    d="M23 18.5h10.5a9.5 9.5 0 0 1 0 19H23"
+    fill="none"
+    stroke="#B8763A"
+    stroke-width="7"
+    stroke-linecap="round"
+  />
+</svg>

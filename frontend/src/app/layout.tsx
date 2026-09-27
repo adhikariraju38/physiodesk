@@ -24,7 +24,10 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PhysioDesk",
+  title: {
+    default: "PhysioDesk",
+    template: "%s · PhysioDesk",
+  },
   description: "Clinic management for a physiotherapy practice",
 };
 
