@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PatientForm } from "@/components/patients/PatientForm";
+import { BillingHistory, SessionHistory } from "@/components/patients/PatientHistory";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { KeyValue, KeyValueGrid } from "@/components/ui/KeyValue";
@@ -96,6 +97,9 @@ export default function PatientProfilePage() {
             </KeyValue>
           </KeyValueGrid>
         </Card>
+
+        <SessionHistory patientId={patient.id} />
+        <BillingHistory patientId={patient.id} />
       </div>
 
       {editing && <PatientForm open patient={patient} onClose={() => setEditing(false)} />}
