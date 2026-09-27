@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input, Select } from "@/components/ui/Field";
 import { type Column, DataTable, TablePagination, Toolbar } from "@/components/ui/Table";
-import { api, queryString } from "@/lib/api";
+import { ConfirmDialog } from "@/components/ui/Modal";
+import { ApiError, api, queryString } from "@/lib/api";
 import { useDebounced } from "@/lib/use-debounced";
 import type { Page, Patient, PatientStatus } from "@/types/api";
 
@@ -32,6 +33,18 @@ export default function PatientsPage() {
 
   // undefined means the form is closed, null means "add", a patient means "edit"
   const [editing, setEditing] = useState<Patient | null | undefined>(undefined);
+  const [removing, setRemoving] = useState<Patient | null>(null);
+
+  const queryClient = useQueryClient();
+
+  const remove = useMutation({
+    mutationFn: (patient: Patient) => api.delete(`/patients/${patient.id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      setRemoving(null);
+    },
+  });
 
   const debouncedSearch = useDebounced(search);
 
@@ -56,17 +69,15 @@ export default function PatientsPage() {
         header: "",
         className: "w-px",
         render: (patient) => (
-          <Button
-            variant="secondary"
-            size="sm"
-            // the row itself opens the profile, so keep the click here
-            onClick={(event) => {
-              event.stopPropagation();
-              setEditing(patient);
-            }}
-          >
-            Edit
-          </Button>
+          // the row itself opens the profile, so these clicks stop here
+          <div className="flex justify-end gap-2" onClick={(event) => event.stopPropagation()}>
+            <Button variant="secondary" size="sm" onClick={() => setEditing(patient)}>
+              Edit
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setRemoving(patient)}>
+              Delete
+            </Button>
+          </div>
         ),
       },
     ],
@@ -135,6 +146,20 @@ export default function PatientsPage() {
           onClose={() => setEditing(undefined)}
         />
       )}
+
+      <ConfirmDialog
+        open={removing !== null}
+        onClose={() => {
+          remove.reset();
+          setRemoving(null);
+        }}
+        onConfirm={() => removing && remove.mutate(removing)}
+        title="Remove patient"
+        message={`${removing?.full_name ?? "This patient"} and their appointment history will be deleted. This cannot be undone.`}
+        confirmLabel="Delete patient"
+        busy={remove.isPending}
+        error={remove.error instanceof ApiError ? remove.error.message : null}
+      />
     </>
   );
 }
