@@ -17,9 +17,11 @@ export function formatTime(value: string): string {
 }
 
 export function formatDate(value: string): string {
-  // pin it to midnight local, otherwise a plain date string is read as utc and
-  // can render as the day before
-  return new Date(`${value}T00:00:00`).toLocaleDateString("en-GB", {
+  // a plain date gets pinned to midnight local, otherwise it is read as utc and
+  // can render as the day before. full timestamps are already unambiguous.
+  const date = value.includes("T") ? new Date(value) : new Date(`${value}T00:00:00`);
+
+  return date.toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
