@@ -76,8 +76,8 @@ export default function LoginPage() {
               </p>
             )}
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Signing in…" : "Sign in"}
+            <Button type="submit" className="w-full" loading={isSubmitting}>
+              Sign in
             </Button>
           </form>
         </Card>

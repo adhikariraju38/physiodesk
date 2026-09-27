@@ -1,4 +1,5 @@
 import { Card, CardHeader } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/cn";
 import { formatTime } from "@/lib/format";
 import type { TherapistCapacity } from "@/types/api";
@@ -49,6 +50,30 @@ export function CapacityStrip({ capacity }: { capacity: TherapistCapacity[] }) {
           ))}
         </div>
       )}
+    </Card>
+  );
+}
+
+export function CapacityStripSkeleton() {
+  return (
+    <Card>
+      <CardHeader
+        title="Today's capacity"
+        description="Booked against free slots for everyone on duty"
+      />
+      <div className="divide-y divide-border">
+        {Array.from({ length: 3 }, (_, row) => (
+          <div key={row} className="px-5 py-4">
+            <Skeleton className="h-4 w-44" />
+            <Skeleton className="mt-2 h-3 w-28" />
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {Array.from({ length: 8 }, (_, slot) => (
+                <Skeleton key={slot} className="h-[26px] w-14" />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </Card>
   );
 }

@@ -2,17 +2,18 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { CapacityStrip } from "@/components/dashboard/CapacityStrip";
+import { CapacityStrip, CapacityStripSkeleton } from "@/components/dashboard/CapacityStrip";
 import { RecentPatients } from "@/components/dashboard/RecentPatients";
 import { StatCard, StatCardSkeleton } from "@/components/dashboard/StatCard";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { api } from "@/lib/api";
+import { keys } from "@/lib/query-keys";
 import { formatDate, formatMoney } from "@/lib/format";
 import type { DashboardSummary } from "@/types/api";
 
 export default function DashboardPage() {
   const { data, isPending, error } = useQuery({
-    queryKey: ["dashboard"],
+    queryKey: keys.dashboard.summary(6),
     queryFn: () => api.get<DashboardSummary>("/dashboard/summary?recent=6"),
   });
 
@@ -59,11 +60,18 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {data && (
+        {isPending ? (
           <>
-            <CapacityStrip capacity={data.capacity} />
-            <RecentPatients patients={data.recent_patients} />
+            <CapacityStripSkeleton />
+            <RecentPatients patients={[]} isLoading />
           </>
+        ) : (
+          data && (
+            <>
+              <CapacityStrip capacity={data.capacity} />
+              <RecentPatients patients={data.recent_patients} />
+            </>
+          )
         )}
       </div>
     </>

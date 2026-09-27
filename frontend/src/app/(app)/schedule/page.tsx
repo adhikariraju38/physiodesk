@@ -1,13 +1,17 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ScheduleGrid, ScheduleLegend } from "@/components/schedule/ScheduleGrid";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { RefreshButton } from "@/components/ui/RefreshButton";
+import { LoadingPanel } from "@/components/ui/Skeleton";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { api } from "@/lib/api";
+import { keys } from "@/lib/query-keys";
+import { useUiStore } from "@/lib/ui-store";
 import { formatDate, toDateInput } from "@/lib/format";
 import type { DaySchedule } from "@/types/api";
 
@@ -19,10 +23,13 @@ function shiftDay(date: string, days: number): string {
 
 export default function SchedulePage() {
   const today = toDateInput(new Date());
-  const [date, setDate] = useState(today);
+
+  // the chosen day follows you around the app rather than snapping back to today
+  const date = useUiStore((state) => state.scheduleDate);
+  const setDate = useUiStore((state) => state.setScheduleDate);
 
   const { data, isPending, error } = useQuery({
-    queryKey: ["schedule", date],
+    queryKey: keys.schedule.day(date),
     queryFn: () => api.get<DaySchedule>(`/schedule?date=${date}`),
     placeholderData: keepPreviousData,
   });
@@ -33,23 +40,19 @@ export default function SchedulePage() {
         <Button variant="secondary" size="sm" onClick={() => setDate(shiftDay(date, -1))}>
           Previous
         </Button>
-        <input
-          type="date"
-          value={date}
-          onChange={(event) => event.target.value && setDate(event.target.value)}
-          className="h-8 rounded-lg border border-border bg-surface px-3 font-mono text-[13px] text-ink focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
-        />
+        <DatePicker compact value={date} onChange={setDate} />
         <Button variant="secondary" size="sm" onClick={() => setDate(shiftDay(date, 1))}>
           Next
         </Button>
         <Button size="sm" onClick={() => setDate(today)} disabled={date === today}>
           Today
         </Button>
+        <RefreshButton queryKey={keys.schedule.all} label="Refresh schedule" />
       </PageHeader>
 
       <div className="px-6 py-6">
         <Card className="overflow-hidden">
-          {isPending && <p className="px-5 py-12 text-center text-sm text-muted">Loading…</p>}
+          {isPending && <LoadingPanel label="Loading the day\u2019s diary\u2026" />}
 
           {error && (
             <p role="alert" className="px-5 py-12 text-center text-sm text-danger">

@@ -46,7 +46,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-secondary/45 px-4 py-10 backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-secondary/45 p-4 backdrop-blur-[2px]"
       onMouseDown={(event) => {
         // only a click on the backdrop itself, not one that started inside the card
         if (event.target === event.currentTarget) onClose();
@@ -57,19 +57,23 @@ export function Modal({ open, onClose, title, description, children, footer, siz
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "w-full rounded-card border border-border bg-surface shadow-card",
+          // a column so a long form scrolls inside the dialog and the header
+          // and buttons stay where they are
+          "flex max-h-[calc(100vh-2rem)] w-full flex-col rounded-card border border-border bg-surface shadow-card",
           WIDTHS[size],
         )}
       >
-        <div className="border-b border-border px-5 py-4">
+        <div className="shrink-0 border-b border-border px-5 py-4">
           <h2 className="text-lg">{title}</h2>
           {description && <p className="mt-0.5 text-sm text-muted">{description}</p>}
         </div>
 
-        <div className="px-5 py-5">{children}</div>
+        <div className="overflow-y-auto overscroll-contain px-5 py-5">{children}</div>
 
         {footer && (
-          <div className="flex justify-end gap-2 border-t border-border px-5 py-4">{footer}</div>
+          <div className="flex shrink-0 justify-end gap-2 border-t border-border px-5 py-4">
+            {footer}
+          </div>
         )}
       </div>
     </div>,
@@ -107,8 +111,8 @@ export function ConfirmDialog({
           <Button variant="secondary" onClick={onClose} disabled={busy}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={onConfirm} disabled={busy}>
-            {busy ? "Working…" : confirmLabel}
+          <Button variant="danger" onClick={onConfirm} loading={busy}>
+            {confirmLabel}
           </Button>
         </>
       }

@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -9,16 +9,21 @@ import { PATIENT_COLUMNS } from "@/components/patients/columns";
 import { PatientForm } from "@/components/patients/PatientForm";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Input, Select } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { type Column, DataTable, TablePagination, Toolbar } from "@/components/ui/Table";
 import { ConfirmDialog } from "@/components/ui/Modal";
+import { RefreshButton } from "@/components/ui/RefreshButton";
 import { ApiError, api, queryString } from "@/lib/api";
+import { keys } from "@/lib/query-keys";
+import { useUiStore } from "@/lib/ui-store";
+import { useInvalidate } from "@/lib/use-invalidate";
 import { useDebounced } from "@/lib/use-debounced";
-import type { Page, Patient, PatientStatus } from "@/types/api";
+import type { Page, Patient } from "@/types/api";
 
 const PAGE_SIZE = 10;
 
-const STATUSES: { value: PatientStatus | ""; label: string }[] = [
+const STATUSES = [
   { value: "", label: "All statuses" },
   { value: "active", label: "Active" },
   { value: "completed", label: "Completed" },
@@ -27,21 +32,24 @@ const STATUSES: { value: PatientStatus | ""; label: string }[] = [
 
 export default function PatientsPage() {
   const router = useRouter();
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<PatientStatus | "">("");
+
+  // kept in the ui store so coming back from a patient profile does not wipe
+  // the filters the user set
+  const search = useUiStore((state) => state.patientSearch);
+  const status = useUiStore((state) => state.patientStatus);
+  const setFilters = useUiStore((state) => state.setPatientFilters);
   const [page, setPage] = useState(1);
 
   // undefined means the form is closed, null means "add", a patient means "edit"
   const [editing, setEditing] = useState<Patient | null | undefined>(undefined);
   const [removing, setRemoving] = useState<Patient | null>(null);
 
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidate();
 
   const remove = useMutation({
     mutationFn: (patient: Patient) => api.delete(`/patients/${patient.id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["patients"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    onSuccess: async () => {
+      await invalidate("patient");
       setRemoving(null);
     },
   });
@@ -51,8 +59,10 @@ export default function PatientsPage() {
   // a narrower filter can leave you past the last page, so start over
   useEffect(() => setPage(1), [debouncedSearch, status]);
 
+  const listKey = keys.patients.list({ search: debouncedSearch, status, page });
+
   const { data, isPending, error } = useQuery({
-    queryKey: ["patients", { search: debouncedSearch, status, page }],
+    queryKey: listKey,
     queryFn: () =>
       api.get<Page<Patient>>(
         `/patients${queryString({ search: debouncedSearch, status, page, page_size: PAGE_SIZE })}`,
@@ -90,31 +100,31 @@ export default function PatientsPage() {
         <Button onClick={() => setEditing(null)}>Add patient</Button>
       </PageHeader>
 
-      <div className="px-6 py-6">
-        <Card className="overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col px-6 py-6">
+        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <Toolbar>
             <Input
               label="Search"
               placeholder="Name or phone number"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => setFilters({ search: event.target.value })}
               className="w-full max-w-xs"
             />
             <Select
               label="Status"
+              options={STATUSES}
               value={status}
-              onChange={(event) => setStatus(event.target.value as PatientStatus | "")}
-              className="w-44"
-            >
-              {STATUSES.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
+              onChange={(next) => setFilters({ status: next })}
+              className="w-48"
+            />
+
+            <div className="ml-auto">
+              <RefreshButton queryKey={keys.patients.all} label="Refresh patients" />
+            </div>
           </Toolbar>
 
           <DataTable
+            fill
             columns={columns}
             rows={data?.items ?? []}
             rowKey={(patient) => patient.id}

@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/cn";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
@@ -18,11 +19,23 @@ const SIZES: Record<Size, string> = {
 type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: Variant;
   size?: Size;
+  /** shows a spinner and blocks further clicks while the request is in flight */
+  loading?: boolean;
 };
 
-export function Button({ variant = "primary", size = "md", className, ...props }: Props) {
+export function Button({
+  variant = "primary",
+  size = "md",
+  loading,
+  className,
+  disabled,
+  children,
+  ...props
+}: Props) {
   return (
     <button
+      disabled={disabled ?? loading}
+      aria-busy={loading || undefined}
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
@@ -32,6 +45,9 @@ export function Button({ variant = "primary", size = "md", className, ...props }
         className,
       )}
       {...props}
-    />
+    >
+      {loading && <Spinner className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} />}
+      {children}
+    </button>
   );
 }

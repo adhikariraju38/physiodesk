@@ -34,7 +34,13 @@ const COLUMNS: Column<Patient>[] = [
   },
 ];
 
-export function RecentPatients({ patients }: { patients: Patient[] }) {
+export function RecentPatients({
+  patients,
+  isLoading,
+}: {
+  patients: Patient[];
+  isLoading?: boolean;
+}) {
   return (
     <Card className="overflow-hidden">
       <CardHeader title="Recent patients" description="The latest additions to the register" />
@@ -42,6 +48,7 @@ export function RecentPatients({ patients }: { patients: Patient[] }) {
         columns={COLUMNS}
         rows={patients}
         rowKey={(patient) => patient.id}
+        isLoading={isLoading}
         emptyMessage="No patients on file yet"
       />
     </Card>

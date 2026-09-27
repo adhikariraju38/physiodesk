@@ -4,8 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Card, CardHeader } from "@/components/ui/Card";
 import { StatusPill } from "@/components/ui/Pill";
+import { RefreshButton } from "@/components/ui/RefreshButton";
 import { type Column, DataTable } from "@/components/ui/Table";
 import { api, queryString } from "@/lib/api";
+import { keys } from "@/lib/query-keys";
 import { formatDate, formatMoney, formatTime } from "@/lib/format";
 import type { Appointment, Invoice, Page } from "@/types/api";
 
@@ -78,13 +80,17 @@ const INVOICE_COLUMNS: Column<Invoice>[] = [
 
 export function SessionHistory({ patientId }: { patientId: number }) {
   const { data, isPending, error } = useQuery({
-    queryKey: ["appointments", { patientId }],
+    queryKey: keys.appointments.forPatient(patientId),
     queryFn: () => api.get<Appointment[]>(`/appointments${queryString({ patient_id: patientId })}`),
   });
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader title="Session history" description="Every appointment booked for this patient" />
+      <CardHeader
+        title="Session history"
+        description="Every appointment booked for this patient"
+        action={<RefreshButton queryKey={keys.appointments.forPatient(patientId)} />}
+      />
       <DataTable
         columns={SESSION_COLUMNS}
         rows={data ?? []}
@@ -99,14 +105,18 @@ export function SessionHistory({ patientId }: { patientId: number }) {
 
 export function BillingHistory({ patientId }: { patientId: number }) {
   const { data, isPending, error } = useQuery({
-    queryKey: ["invoices", { patientId }],
+    queryKey: keys.invoices.forPatient(patientId),
     queryFn: () =>
       api.get<Page<Invoice>>(`/invoices${queryString({ patient_id: patientId, page_size: 50 })}`),
   });
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader title="Billing history" description="Invoices raised against this patient" />
+      <CardHeader
+        title="Billing history"
+        description="Invoices raised against this patient"
+        action={<RefreshButton queryKey={keys.invoices.forPatient(patientId)} />}
+      />
       <DataTable
         columns={INVOICE_COLUMNS}
         rows={data?.items ?? []}

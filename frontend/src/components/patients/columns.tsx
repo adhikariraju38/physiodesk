@@ -27,12 +27,14 @@ export const PATIENT_COLUMNS: Column<Patient>[] = [
   {
     key: "therapist",
     header: "Therapist",
+    className: "whitespace-nowrap",
     render: (patient) =>
       patient.assigned_therapist?.full_name ?? <span className="text-muted">Unassigned</span>,
   },
   {
     key: "package",
     header: "Package",
+    className: "whitespace-nowrap",
     render: (patient) => patient.package ?? <span className="text-muted">None</span>,
   },
   {

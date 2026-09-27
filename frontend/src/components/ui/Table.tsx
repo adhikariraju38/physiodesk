@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/cn";
 
 export type Column<T> = {
@@ -16,6 +17,9 @@ type Props<T> = {
   isLoading?: boolean;
   error?: string | null;
   emptyMessage?: string;
+  /** fill the space the card gives it and scroll the rows, keeping the
+      toolbar above and the pager below on screen */
+  fill?: boolean;
 };
 
 export function DataTable<T>({
@@ -26,18 +30,20 @@ export function DataTable<T>({
   isLoading,
   error,
   emptyMessage = "Nothing to show yet",
+  fill,
 }: Props<T>) {
   return (
-    <div className="overflow-x-auto">
+    <div className={cn("overflow-auto", fill ? "min-h-0 flex-1 overscroll-contain" : "")}>
       <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b border-border text-left">
+        {/* sticky, so the column names stay put while the rows scroll under them */}
+        <thead className="sticky top-0 z-10 bg-surface">
+          <tr className="text-left">
             {columns.map((column) => (
               <th
                 key={column.key}
                 scope="col"
                 className={cn(
-                  "px-5 py-3 text-xs font-medium tracking-wide text-muted uppercase",
+                  "border-b border-border bg-surface px-5 py-3 text-xs font-medium tracking-wide text-muted uppercase",
                   column.className,
                 )}
               >
@@ -48,7 +54,16 @@ export function DataTable<T>({
         </thead>
 
         <tbody>
-          {isLoading && <StatusRow span={columns.length}>Loading…</StatusRow>}
+          {isLoading && (
+            <tr>
+              <td colSpan={columns.length} className="px-5 py-16">
+                <div role="status" aria-live="polite" className="flex justify-center text-primary">
+                  <Spinner className="h-6 w-6" />
+                  <span className="sr-only">Loading</span>
+                </div>
+              </td>
+            </tr>
+          )}
 
           {!isLoading && error && (
             <StatusRow span={columns.length} tone="danger">
@@ -130,7 +145,7 @@ export function TablePagination({
   if (total === 0) return null;
 
   return (
-    <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-3 text-sm">
+    <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border px-5 py-3 text-sm">
       <p className="text-muted">
         Page <span className="font-mono">{page}</span> of <span className="font-mono">{pages}</span>
         <span className="mx-2 text-border">|</span>

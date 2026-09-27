@@ -1,70 +1,135 @@
+"use client";
+
+import { useId } from "react";
+
 import { cn } from "@/lib/cn";
 
-const CONTROL = cn(
+export const CONTROL_CLASSES = cn(
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink",
   "placeholder:text-muted/70 transition-colors",
   "focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20",
   "disabled:bg-background disabled:text-muted",
 );
 
-type Wrapper = {
+type ShellProps = {
   label?: string;
   error?: string;
   hint?: string;
+  /** marks the field with an asterisk */
+  required?: boolean;
+  /** tags the field "Optional". deliberately explicit rather than "not required",
+      so search boxes and filters do not get labelled as optional form fields */
+  optional?: boolean;
   className?: string;
+  htmlFor?: string;
+  children: React.ReactNode;
 };
 
-function Shell({
+export function FieldShell({
   label,
   error,
   hint,
+  required,
+  optional,
   className,
+  htmlFor,
   children,
-}: Wrapper & { children: React.ReactNode }) {
+}: ShellProps) {
   return (
-    <label className={cn("block", className)}>
-      {label && <span className="mb-1.5 block text-sm font-medium text-ink">{label}</span>}
-      {children}
-      {error ? (
-        <span className="mt-1 block text-xs text-danger">{error}</span>
-      ) : (
-        hint && <span className="mt-1 block text-xs text-muted">{hint}</span>
+    <div className={cn("block", className)}>
+      {label && (
+        <div className="mb-1.5 flex items-baseline justify-between gap-2">
+          <label htmlFor={htmlFor} className="text-sm font-medium text-ink">
+            {label}
+            {required && (
+              <span className="ml-0.5 text-danger" aria-hidden="true">
+                *
+              </span>
+            )}
+          </label>
+          {optional && <span className="text-[11px] text-muted">Optional</span>}
+        </div>
       )}
-    </label>
+
+      {children}
+
+      {error ? (
+        <p className="mt-1 text-xs text-danger">{error}</p>
+      ) : (
+        hint && <p className="mt-1 text-xs text-muted">{hint}</p>
+      )}
+    </div>
+  );
+}
+
+/** Sits at the top of a form so the asterisk does not need explaining twice. */
+export function RequiredNote() {
+  return (
+    <p className="text-xs text-muted">
+      Fields marked <span className="text-danger">*</span> are required.
+    </p>
   );
 }
 
 type InputProps = React.InputHTMLAttributes<HTMLInputElement> &
-  Wrapper & { ref?: React.Ref<HTMLInputElement> };
+  Omit<ShellProps, "children" | "htmlFor"> & { ref?: React.Ref<HTMLInputElement> };
 
-export function Input({ label, error, hint, className, ...props }: InputProps) {
+export function Input({ label, error, hint, required, optional, className, ...props }: InputProps) {
+  const id = useId();
+
   return (
-    <Shell label={label} error={error} hint={hint} className={className}>
-      <input className={cn(CONTROL, error && "border-danger")} {...props} />
-    </Shell>
-  );
-}
-
-type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement> &
-  Wrapper & { ref?: React.Ref<HTMLSelectElement> };
-
-export function Select({ label, error, hint, className, children, ...props }: SelectProps) {
-  return (
-    <Shell label={label} error={error} hint={hint} className={className}>
-      <select className={cn(CONTROL, "pr-8", error && "border-danger")} {...props}>
-        {children}
-      </select>
-    </Shell>
+    <FieldShell
+      label={label}
+      error={error}
+      hint={hint}
+      required={required}
+      optional={optional}
+      className={className}
+      htmlFor={id}
+    >
+      <input
+        id={id}
+        aria-required={required}
+        aria-invalid={error ? true : undefined}
+        className={cn(CONTROL_CLASSES, error && "border-danger")}
+        {...props}
+      />
+    </FieldShell>
   );
 }
 
 type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> &
-  Wrapper & { ref?: React.Ref<HTMLTextAreaElement> };
+  Omit<ShellProps, "children" | "htmlFor"> & { ref?: React.Ref<HTMLTextAreaElement> };
 
-export function Textarea({ label, error, hint, className, ...props }: TextareaProps) {
+export function Textarea({
+  label,
+  error,
+  hint,
+  required,
+  optional,
+  className,
+  ...props
+}: TextareaProps) {
+  const id = useId();
+
   return (
-    <Shell label={label} error={error} hint={hint} className={className}>
-      <textarea rows={3} className={cn(CONTROL, "resize-y", error && "border-danger")} {...props} />
-    </Shell>
+    <FieldShell
+      label={label}
+      error={error}
+      hint={hint}
+      required={required}
+      optional={optional}
+      className={className}
+      htmlFor={id}
+    >
+      <textarea
+        id={id}
+        rows={3}
+        aria-required={required}
+        aria-invalid={error ? true : undefined}
+        className={cn(CONTROL_CLASSES, "resize-y", error && "border-danger")}
+        {...props}
+      />
+    </FieldShell>
   );
 }

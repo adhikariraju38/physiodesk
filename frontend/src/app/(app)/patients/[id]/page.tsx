@@ -12,7 +12,9 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { KeyValue, KeyValueGrid } from "@/components/ui/KeyValue";
 import { StatusPill } from "@/components/ui/Pill";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { api } from "@/lib/api";
+import { keys } from "@/lib/query-keys";
 import { formatDate } from "@/lib/format";
 import type { Patient } from "@/types/api";
 
@@ -26,7 +28,7 @@ export default function PatientProfilePage() {
     isPending,
     error,
   } = useQuery({
-    queryKey: ["patient", patientId],
+    queryKey: keys.patients.detail(patientId),
     queryFn: () => api.get<Patient>(`/patients/${patientId}`),
   });
 
@@ -34,7 +36,19 @@ export default function PatientProfilePage() {
     return (
       <>
         <PageHeader title="Patient" />
-        <p className="px-6 py-10 text-sm text-muted">Loading…</p>
+        <div className="px-6 py-6">
+          <Card className="px-5 py-5">
+            <Skeleton className="h-5 w-32" />
+            <div className="mt-5 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }, (_, index) => (
+                <div key={index}>
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="mt-2 h-4 w-36" />
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
       </>
     );
   }

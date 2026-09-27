@@ -1,15 +1,30 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/Button";
-import { Input, Select, Textarea } from "@/components/ui/Field";
+import { Input, RequiredNote, Textarea } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { ApiError, api } from "@/lib/api";
+import { keys } from "@/lib/query-keys";
+import { useInvalidate } from "@/lib/use-invalidate";
 import type { Patient, Therapist } from "@/types/api";
+
+const GENDERS = [
+  { value: "female", label: "Female" },
+  { value: "male", label: "Male" },
+  { value: "other", label: "Other" },
+];
+
+const STATUSES = [
+  { value: "active", label: "Active", hint: "Currently under treatment" },
+  { value: "completed", label: "Completed", hint: "Course of treatment finished" },
+  { value: "on_hold", label: "On hold", hint: "Paused for now" },
+];
 
 const schema = z.object({
   full_name: z.string().min(2, "Please give a full name").max(120),
@@ -49,17 +64,18 @@ export function PatientForm({
   onClose: () => void;
   patient?: Patient;
 }) {
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidate();
   const editing = patient !== undefined;
 
-  const { data: therapists } = useQuery({
-    queryKey: ["therapists", { active: true }],
+  const { data: therapists, isPending: therapistsLoading } = useQuery({
+    queryKey: keys.therapists.list(true),
     queryFn: () => api.get<Therapist[]>("/therapists?active=true"),
     enabled: open,
   });
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<Values>({
@@ -83,11 +99,10 @@ export function PatientForm({
         ? api.patch<Patient>(`/patients/${patient.id}`, payload)
         : api.post<Patient>("/patients", payload);
     },
-    onSuccess: () => {
-      // the register, the profile and the dashboard all show this patient
-      queryClient.invalidateQueries({ queryKey: ["patients"] });
-      queryClient.invalidateQueries({ queryKey: ["patient"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    onSuccess: async () => {
+      // the register, the profile, the session lists and the dashboard all
+      // show something about this patient
+      await invalidate("patient");
       onClose();
     },
   });
@@ -112,60 +127,104 @@ export function PatientForm({
         </>
       }
     >
+      <RequiredNote />
+
       <form
         id="patient-form"
         onSubmit={handleSubmit((values) => save.mutate(values))}
-        className="grid gap-4 sm:grid-cols-2"
+        className="mt-4 grid gap-4 sm:grid-cols-2"
         noValidate
       >
-        <Input label="Full name" error={errors.full_name?.message} {...register("full_name")} />
-        <Input label="Phone" error={errors.phone?.message} {...register("phone")} />
+        <Input
+          label="Full name"
+          required
+          error={errors.full_name?.message}
+          {...register("full_name")}
+        />
+        <Input label="Phone" required error={errors.phone?.message} {...register("phone")} />
 
         <Input
           label="Age"
           type="number"
           min={0}
           max={120}
+          required
           error={errors.age?.message}
           {...register("age")}
         />
-        <Select label="Gender" error={errors.gender?.message} {...register("gender")}>
-          <option value="female">Female</option>
-          <option value="male">Male</option>
-          <option value="other">Other</option>
-        </Select>
+
+        <Controller
+          control={control}
+          name="gender"
+          render={({ field }) => (
+            <Select
+              label="Gender"
+              required
+              options={GENDERS}
+              value={field.value}
+              onChange={field.onChange}
+              error={errors.gender?.message}
+            />
+          )}
+        />
 
         <Input
           label="Condition"
+          required
           className="sm:col-span-2"
+          placeholder="What are they being treated for?"
           error={errors.condition?.message}
           {...register("condition")}
         />
 
-        <Select label="Assigned therapist" {...register("assigned_therapist_id")}>
-          <option value="">Not assigned yet</option>
-          {therapists?.map((therapist) => (
-            <option key={therapist.id} value={therapist.id}>
-              {therapist.full_name}
-            </option>
-          ))}
-        </Select>
+        <Controller
+          control={control}
+          name="assigned_therapist_id"
+          render={({ field }) => (
+            <Select
+              label="Assigned therapist"
+              optional
+              placeholder={therapistsLoading ? "Loading therapists\u2026" : "Not assigned yet"}
+              disabled={therapistsLoading}
+              options={[
+                { value: "", label: "Not assigned yet" },
+                ...(therapists ?? []).map((therapist) => ({
+                  value: String(therapist.id),
+                  label: therapist.full_name,
+                  hint: therapist.specialty,
+                })),
+              ]}
+              value={field.value}
+              onChange={field.onChange}
+            />
+          )}
+        />
 
         <Input
           label="Package"
+          optional
           placeholder="e.g. 10 sessions"
           error={errors.package?.message}
           {...register("package")}
         />
 
-        <Select label="Status" {...register("status")}>
-          <option value="active">Active</option>
-          <option value="completed">Completed</option>
-          <option value="on_hold">On hold</option>
-        </Select>
+        <Controller
+          control={control}
+          name="status"
+          render={({ field }) => (
+            <Select
+              label="Status"
+              required
+              options={STATUSES}
+              value={field.value}
+              onChange={field.onChange}
+            />
+          )}
+        />
 
         <Textarea
           label="Address"
+          optional
           className="sm:col-span-2"
           error={errors.address?.message}
           {...register("address")}
