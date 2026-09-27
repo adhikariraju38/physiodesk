@@ -27,14 +27,14 @@ export function Sidebar() {
   const { user, signOut } = useAuth();
 
   return (
-    <aside className="flex w-16 shrink-0 flex-col bg-secondary md:w-60">
+    <aside className="flex h-full w-16 shrink-0 flex-col bg-secondary md:w-60">
       <div className="px-3 py-6 md:px-5">
         <p className="hidden font-display text-xl text-white md:block">PhysioDesk</p>
         <p className="mt-0.5 hidden text-xs text-white/45 md:block">Clinic desk</p>
         <p className="text-center font-display text-xl text-white md:hidden">P</p>
       </div>
 
-      <nav className="flex-1 space-y-1 px-2 md:px-3">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-2 md:px-3">
         {NAV.map(({ href, label, Icon }) => {
           // startsWith so /patients/7 keeps the Patients item lit
           const active = pathname === href || pathname.startsWith(`${href}/`);

@@ -6,9 +6,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <Providers>
       <AuthProvider>
-        <div className="flex min-h-screen">
+        {/* the shell is exactly one viewport tall and the main column does the
+            scrolling, so the sidebar never scrolls away with the content */}
+        <div className="flex h-screen overflow-hidden">
           <Sidebar />
-          <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+          <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+            {children}
+          </main>
         </div>
       </AuthProvider>
     </Providers>

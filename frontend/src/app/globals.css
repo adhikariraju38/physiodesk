@@ -41,11 +41,20 @@
 html,
 body {
   height: 100%;
+  background-color: var(--color-background);
+  /* macos rubber band otherwise pulls the white page behind the app into view */
+  overscroll-behavior: none;
 }
 
 body {
-  background-color: var(--color-background);
   color: var(--color-ink);
+}
+
+/* tailwind's reset leaves buttons on the default arrow cursor */
+button:not(:disabled),
+[role="button"]:not(:disabled),
+summary {
+  cursor: pointer;
 }
 
 h1,

@@ -157,7 +157,7 @@ export function ScheduleLegend() {
         <span className="h-3 w-5 rounded bg-primary-soft" /> Booked
       </span>
       <span className="flex items-center gap-2">
-        <span className="h-3 w-5 rounded bg-background/60 ring-1 ring-border" /> Not working
+        <span className="h-3 w-5 rounded border border-border bg-background" /> Not working
       </span>
     </div>
   );
