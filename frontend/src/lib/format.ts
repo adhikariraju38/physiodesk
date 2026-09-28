@@ -54,3 +54,21 @@ export function formatWorkingDays(days: number[]): string {
   if (days.length === 7) return "Every day";
   return days.map(weekdayName).join(", ");
 }
+
+/**
+ * Quarter hour options for the time selects.
+ *
+ * A select rather than a native time input, so the therapist form matches
+ * everything else and cannot be given 09:07 as a start time.
+ */
+export function timeOptions(fromHour = 6, toHour = 21, stepMinutes = 15) {
+  const options: { value: string; label: string }[] = [];
+
+  for (let minutes = fromHour * 60; minutes <= toHour * 60; minutes += stepMinutes) {
+    const hh = String(Math.floor(minutes / 60)).padStart(2, "0");
+    const mm = String(minutes % 60).padStart(2, "0");
+    options.push({ value: `${hh}:${mm}:00`, label: `${hh}:${mm}` });
+  }
+
+  return options;
+}
