@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/Button";
@@ -11,7 +11,15 @@ import { ApiError, api } from "@/lib/api";
 import { formatDate, formatTime } from "@/lib/format";
 import { keys } from "@/lib/query-keys";
 import { useInvalidate } from "@/lib/use-invalidate";
-import type { Appointment, Page, Patient, PaymentMethod, TherapistBrief } from "@/types/api";
+import { queryString } from "@/lib/api";
+import type {
+  Appointment,
+  DaySchedule,
+  Page,
+  Patient,
+  PaymentMethod,
+  TherapistBrief,
+} from "@/types/api";
 
 const PAYMENT_METHODS: { value: PaymentMethod | ""; label: string }[] = [
   { value: "", label: "Decide later" },
@@ -32,11 +40,13 @@ type Props = {
 
 export function BookingModal({ open, onClose, therapist, date, startTime, endTime }: Props) {
   const invalidate = useInvalidate();
+  const queryClient = useQueryClient();
 
   const [patientId, setPatientId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [notes, setNotes] = useState("");
   const [missingPatient, setMissingPatient] = useState(false);
+  const [conflict, setConflict] = useState<string | null>(null);
 
   // the whole register, this is a picker rather than a paged list
   const { data: patients, isPending: patientsLoading } = useQuery({
@@ -44,6 +54,32 @@ export function BookingModal({ open, onClose, therapist, date, startTime, endTim
     queryFn: () => api.get<Page<Patient>>("/patients?page=1&page_size=100"),
     enabled: open,
   });
+
+  // the patient may already be in with someone else at another time that day.
+  // the api allows it, a receptionist usually wants to know first.
+  const { data: sameDay } = useQuery({
+    queryKey: keys.appointments.forPatient(Number(patientId)),
+    queryFn: () =>
+      api.get<Appointment[]>(
+        `/appointments${queryString({ patient_id: patientId, date_from: date, date_to: date })}`,
+      ),
+    enabled: open && Boolean(patientId),
+  });
+
+  const clashesElsewhere = (sameDay ?? []).filter((row) => row.status !== "cancelled");
+
+  /** Re-read the day before writing, in case someone took the slot meanwhile. */
+  async function slotStillFree(): Promise<boolean> {
+    const fresh = await queryClient.fetchQuery({
+      queryKey: keys.schedule.day(date),
+      queryFn: () => api.get<DaySchedule>(`/schedule?date=${date}`),
+      staleTime: 0,
+    });
+
+    const column = fresh.therapists.find((row) => row.therapist.id === therapist.id);
+    const slot = column?.slots.find((row) => row.start_time === startTime);
+    return Boolean(slot && !slot.is_booked);
+  }
 
   const book = useMutation({
     mutationFn: () =>
@@ -61,12 +97,23 @@ export function BookingModal({ open, onClose, therapist, date, startTime, endTim
     },
   });
 
-  function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent) {
     event.preventDefault();
+    setConflict(null);
+
     if (!patientId) {
       setMissingPatient(true);
       return;
     }
+
+    if (!(await slotStillFree())) {
+      setConflict(
+        `${therapist.full_name} was booked at ${formatTime(startTime)} while this form was open. Close this and pick another slot.`,
+      );
+      await invalidate("appointment");
+      return;
+    }
+
     book.mutate();
   }
 
@@ -127,9 +174,18 @@ export function BookingModal({ open, onClose, therapist, date, startTime, endTim
           onChange={(event) => setNotes(event.target.value)}
         />
 
-        {failure && (
+        {clashesElsewhere.length > 0 && (
+          <p className="rounded-lg bg-primary-soft px-3 py-2 text-sm text-primary-ink">
+            Already booked that day at{" "}
+            {clashesElsewhere.map((row) => formatTime(row.start_time)).join(", ")} with{" "}
+            {clashesElsewhere.map((row) => row.therapist.full_name).join(", ")}. You can still go
+            ahead.
+          </p>
+        )}
+
+        {(conflict ?? failure) && (
           <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
-            {failure}
+            {conflict ?? failure}
           </p>
         )}
       </form>
