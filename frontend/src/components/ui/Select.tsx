@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { FieldShell } from "@/components/ui/Field";
@@ -24,6 +24,8 @@ type Props = {
   hint?: string;
   required?: boolean;
   optional?: boolean;
+  /** adds a filter box to the panel, for lists like the whole patient register */
+  searchable?: boolean;
   disabled?: boolean;
   className?: string;
   name?: string;
@@ -73,27 +75,47 @@ export function Select({
   hint,
   required,
   optional,
+  searchable,
   disabled,
   className,
   name,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  const [filter, setFilter] = useState("");
+  const searchRef = useRef<HTMLInputElement | null>(null);
   const listId = useId();
 
   const { triggerRef, panelRef, style } = useAnchoredPanel(open, () => setOpen(false));
   const selected = options.find((option) => option.value === value);
 
+  const visible = useMemo(() => {
+    if (!searchable || !filter.trim()) return options;
+    const needle = filter.trim().toLowerCase();
+    return options.filter(
+      (option) =>
+        option.label.toLowerCase().includes(needle) || option.hint?.toLowerCase().includes(needle),
+    );
+  }, [options, filter, searchable]);
+
   // opening should land on whatever is currently chosen, not the top of the list
   useEffect(() => {
     if (!open) return;
+    setFilter("");
     const index = options.findIndex((option) => option.value === value);
     setActive(index < 0 ? 0 : index);
-    panelRef.current?.focus();
-  }, [open, options, value, panelRef]);
+    // with a filter box the keystrokes belong there, otherwise the list takes them
+    if (searchable) searchRef.current?.focus();
+    else panelRef.current?.focus();
+  }, [open, options, value, panelRef, searchable]);
+
+  // filtering can leave the highlight past the end of the shorter list
+  useEffect(() => {
+    setActive((current) => Math.min(current, Math.max(visible.length - 1, 0)));
+  }, [visible.length]);
 
   function choose(index: number) {
-    const option = options[index];
+    const option = visible[index];
     if (!option) return;
     onChange(option.value);
     setOpen(false);
@@ -104,7 +126,7 @@ export function Select({
     switch (event.key) {
       case "ArrowDown":
         event.preventDefault();
-        setActive((current) => Math.min(current + 1, options.length - 1));
+        setActive((current) => Math.min(current + 1, visible.length - 1));
         break;
       case "ArrowUp":
         event.preventDefault();
@@ -116,7 +138,7 @@ export function Select({
         break;
       case "End":
         event.preventDefault();
-        setActive(options.length - 1);
+        setActive(visible.length - 1);
         break;
       case "Enter":
       case " ":
@@ -185,7 +207,19 @@ export function Select({
             style={style}
             className="z-[60] overflow-y-auto overscroll-contain rounded-xl border border-border bg-surface p-1 shadow-card focus:outline-none"
           >
-            {options.map((option, index) => {
+            {searchable && (
+              <input
+                ref={searchRef}
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+                onKeyDown={onPanelKeyDown}
+                placeholder="Type to filter…"
+                aria-label="Filter the list"
+                className="mb-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-ink placeholder:text-muted/70 focus:border-primary focus:outline-none"
+              />
+            )}
+
+            {visible.map((option, index) => {
               const isSelected = option.value === value;
 
               return (
@@ -216,8 +250,10 @@ export function Select({
               );
             })}
 
-            {options.length === 0 && (
-              <p className="px-3 py-6 text-center text-sm text-muted">Nothing to choose from</p>
+            {visible.length === 0 && (
+              <p className="px-3 py-6 text-center text-sm text-muted">
+                {filter ? "Nothing matches that" : "Nothing to choose from"}
+              </p>
             )}
           </div>,
           document.body,

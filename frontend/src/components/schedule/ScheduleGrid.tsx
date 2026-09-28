@@ -9,7 +9,7 @@ import type { DaySchedule, ScheduleSlot, TherapistDay } from "@/types/api";
 
 type Props = {
   schedule: DaySchedule;
-  onOpenSlot: (column: TherapistDay, startTime: string) => void;
+  onOpenSlot: (column: TherapistDay, slot: ScheduleSlot) => void;
   onOpenAppointment: (appointmentId: number) => void;
 };
 
@@ -104,7 +104,7 @@ export function ScheduleGrid({ schedule, onOpenSlot, onOpenAppointment }: Props)
                       onClick={() =>
                         slot.appointment
                           ? onOpenAppointment(slot.appointment.id)
-                          : onOpenSlot(column, slot.start_time)
+                          : onOpenSlot(column, slot)
                       }
                     />
                   </td>
