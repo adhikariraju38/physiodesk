@@ -1,6 +1,7 @@
 "use client";
 
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { INVOICE_COLUMNS } from "@/components/billing/columns";
@@ -34,6 +35,7 @@ export default function BillingPage() {
   const [page, setPage] = useState(1);
   const [raising, setRaising] = useState(false);
   const [voiding, setVoiding] = useState<Invoice | null>(null);
+  const router = useRouter();
 
   const { isAdmin } = useAuth();
   const invalidate = useInvalidate();
@@ -72,7 +74,8 @@ export default function BillingPage() {
         header: "",
         className: "w-px",
         render: (invoice) => (
-          <div className="flex justify-end gap-2">
+          // the row opens the invoice, so these clicks stop here
+          <div className="flex justify-end gap-2" onClick={(event) => event.stopPropagation()}>
             {invoice.status === "due" && (
               <Button
                 variant="secondary"
@@ -121,6 +124,7 @@ export default function BillingPage() {
             columns={columns}
             rows={data?.items ?? []}
             rowKey={(invoice) => invoice.id}
+            onRowClick={(invoice) => router.push(`/billing/${invoice.id}`)}
             isLoading={isPending}
             error={error?.message ?? null}
             emptyMessage={status ? "No invoices with that status" : "Nothing billed yet"}

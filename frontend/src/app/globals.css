@@ -63,3 +63,21 @@ h3 {
   font-family: var(--font-display);
   letter-spacing: -0.01em;
 }
+
+/* printing an invoice should give a document, not a screenshot of the app */
+@media print {
+  aside,
+  header,
+  button {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #fff;
+  }
+
+  main {
+    overflow: visible !important;
+  }
+}

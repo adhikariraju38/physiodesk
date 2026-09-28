@@ -73,6 +73,7 @@ export const keys = {
     all: ["invoices"] as QueryKey<"invoices">,
     list: (filters: InvoiceListFilters) => ["invoices", "list", filters] as QueryKey<"invoices">,
     forPatient: (patientId: number) => ["invoices", "patient", patientId] as QueryKey<"invoices">,
+    detail: (id: number) => ["invoices", "detail", id] as QueryKey<"invoices">,
   },
 } as const;
 
