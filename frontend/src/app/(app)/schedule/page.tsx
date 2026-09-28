@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { PageHeader } from "@/components/layout/PageHeader";
+import { AppointmentModal } from "@/components/schedule/AppointmentModal";
 import { BookingModal } from "@/components/schedule/BookingModal";
 import { ScheduleGrid, ScheduleLegend } from "@/components/schedule/ScheduleGrid";
 import { Button } from "@/components/ui/Button";
@@ -33,6 +34,7 @@ export default function SchedulePage() {
   const setDate = useUiStore((state) => state.setScheduleDate);
 
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [viewing, setViewing] = useState<number | null>(null);
 
   const { data, isPending, error } = useQuery({
     queryKey: keys.schedule.day(date),
@@ -71,7 +73,7 @@ export default function SchedulePage() {
               <ScheduleGrid
                 schedule={data}
                 onOpenSlot={(column, slot) => setBooking({ therapist: column.therapist, slot })}
-                onOpenAppointment={() => undefined}
+                onOpenAppointment={setViewing}
               />
               <ScheduleLegend />
             </>
@@ -88,6 +90,10 @@ export default function SchedulePage() {
           startTime={booking.slot.start_time}
           endTime={booking.slot.end_time}
         />
+      )}
+
+      {viewing !== null && (
+        <AppointmentModal open onClose={() => setViewing(null)} appointmentId={viewing} />
       )}
     </>
   );
