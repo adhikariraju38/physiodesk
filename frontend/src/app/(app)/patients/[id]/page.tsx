@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import { useState } from "react";
 
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -13,8 +13,9 @@ import { Card, CardHeader } from "@/components/ui/Card";
 import { KeyValue, KeyValueGrid } from "@/components/ui/KeyValue";
 import { StatusPill } from "@/components/ui/Pill";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 import { keys } from "@/lib/query-keys";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { formatDate } from "@/lib/format";
 import type { Patient } from "@/types/api";
 
@@ -27,9 +28,11 @@ export default function PatientProfilePage() {
     data: patient,
     isPending,
     error,
+    refetch,
   } = useQuery({
     queryKey: keys.patients.detail(patientId),
     queryFn: () => api.get<Patient>(`/patients/${patientId}`),
+    retry: false,
   });
 
   if (isPending) {
@@ -53,19 +56,18 @@ export default function PatientProfilePage() {
     );
   }
 
+  // a link to a deleted patient should look like any other missing page
+  if (error instanceof ApiError && error.status === 404) notFound();
+
   if (error || !patient) {
     return (
-      <>
-        <PageHeader title="Patient" />
-        <div className="px-6 py-10">
-          <p role="alert" className="rounded-card bg-danger-soft px-4 py-3 text-sm text-danger">
-            {error?.message ?? "That patient could not be loaded"}
-          </p>
-          <Link href="/patients" className="mt-4 inline-block text-sm text-primary underline">
-            Back to patients
-          </Link>
-        </div>
-      </>
+      <ErrorState
+        title="That patient could not be loaded"
+        message={error?.message ?? "The record did not come back from the server."}
+        onRetry={() => refetch()}
+        homeHref="/patients"
+        homeLabel="Back to patients"
+      />
     );
   }
 
