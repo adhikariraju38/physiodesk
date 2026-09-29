@@ -45,11 +45,38 @@ billing and the roster read only.
 The Swagger page at `/docs` shares cookies with the app, so signing in at
 localhost:3000 first means you can call the protected endpoints from there too.
 
-### Re-seeding
+### The seed data
 
 `python -m app.seed` empties the app tables and fills them again, so run it
-whenever the data gets messy from clicking around. It is deterministic apart
-from being anchored to today's date.
+whenever the data gets messy from clicking around.
+
+Everything is built around **today**, not a date baked in when I wrote it. That
+matters: a fixture seeded a week ago leaves today with an empty diary and a
+dashboard of zeros, which reads as broken rather than quiet. Whenever you run
+it, the clinic has a week behind it and a week ahead.
+
+To build the week around some other day instead:
+
+```sh
+docker compose exec api python -m app.seed --date 2026-10-15
+```
+
+What you get:
+
+| | |
+| --- | --- |
+| Users | 1 admin, 1 staff |
+| Therapists | 4, with different specialties, working days, hours and session lengths |
+| Patients | 10, spread across active, completed and on hold |
+| Appointments | around 120, from the previous week to the next, in every status |
+| Invoices | around 40, a mix of paid, due and void |
+
+The sessions earlier in the day are marked completed and billed, which is what
+puts real numbers behind "patients seen today" and "revenue collected today".
+Seed first thing in the morning and both will be low or zero, because at that
+hour they should be. Marking a due invoice paid moves the revenue figure
+immediately, which is the quickest way to see that the dashboard is computed
+rather than stored.
 
 ---
 

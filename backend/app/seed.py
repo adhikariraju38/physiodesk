@@ -3,11 +3,16 @@
 Run it after the migrations, with `python -m app.seed`. It wipes the app tables
 first, so it can be run again whenever the data gets messy from clicking around.
 
+The week is built around today unless `--date` says otherwise. That matters
+because a dump seeded last week leaves today with an empty diary and a dashboard
+full of zeros, which looks broken rather than quiet.
+
 Appointments are placed by asking the scheduling service for each therapist's
 real slots, which means the seeded diary can never contain a booking the app
 would refuse to make itself.
 """
 
+import argparse
 import random
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
@@ -273,9 +278,27 @@ def create_invoices(db: Session, appointments: list[Appointment], rng: random.Ra
     return issued
 
 
-def run() -> None:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="python -m app.seed",
+        description="Wipe the app tables and fill them with a clinic week around a given day.",
+    )
+    parser.add_argument(
+        "--date",
+        dest="anchor",
+        type=date.fromisoformat,
+        metavar="YYYY-MM-DD",
+        help="the day the week is built around, defaults to today",
+    )
+    return parser.parse_args(argv)
+
+
+def run(anchor: date | None = None) -> None:
     rng = random.Random(RANDOM_SEED)
-    now = datetime.now()
+
+    # keep the wall clock time, so "the sessions earlier today are finished"
+    # still holds whichever day the week is anchored to
+    now = datetime.combine(anchor, datetime.now().time()) if anchor else datetime.now()
 
     with SessionLocal() as db:
         wipe(db)
@@ -285,7 +308,8 @@ def run() -> None:
         appointments = create_appointments(db, therapists, patients, now, rng)
         invoices = create_invoices(db, appointments, rng)
 
-    print(f"seeded {len(users)} users, {len(therapists)} therapists, {len(patients)} patients")
+    print(f"seeded a clinic week around {now:%d %b %Y}")
+    print(f"        {len(users)} users, {len(therapists)} therapists, {len(patients)} patients")
     print(f"        {len(appointments)} appointments, {invoices} invoices")
     print()
     for email, _, password, role in USERS:
@@ -293,4 +317,4 @@ def run() -> None:
 
 
 if __name__ == "__main__":
-    run()
+    run(parse_args().anchor)
