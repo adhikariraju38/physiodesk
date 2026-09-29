@@ -3,6 +3,35 @@ name = "physiodesk-api"
 version = "0.1.0"
 requires-python = ">=3.12"
 
+# the one list of dependencies. docker, ci and the deployment all install from
+# here, because a second copy in requirements.txt is a copy that goes stale.
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "sqlalchemy>=2.0",
+  "alembic>=1.14",
+  "psycopg[binary]>=3.2",
+  "pydantic-settings>=2.6",
+  "email-validator>=2.2",
+  "bcrypt>=4.2",
+  "pyjwt>=2.10",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  # starlette's TestClient sits on httpx2 now, it will not import without it
+  "httpx2>=2.13",
+  "ruff>=0.8",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"

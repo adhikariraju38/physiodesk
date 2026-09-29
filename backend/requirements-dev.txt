@@ -1,5 +1,0 @@
--r requirements.txt
-pytest>=8.3
-# starlette's TestClient sits on httpx2 now, it will not import without it
-httpx2>=2.13
-ruff>=0.8
