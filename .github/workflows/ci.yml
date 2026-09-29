@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: physiodesk
+          POSTGRES_PASSWORD: physiodesk
+          POSTGRES_DB: physiodesk
+        ports:
+          - 5432:5432
+        # the job starts as soon as the container does, which is before postgres
+        # is actually listening, so wait for it properly
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      DATABASE_URL: postgresql+psycopg://physiodesk:physiodesk@localhost:5432/physiodesk
+      SECRET_KEY: ci-only-secret-not-for-anything-real-000
+      # the dashboard counts "today", so pin the clock the same way compose does
+      TZ: Asia/Kathmandu
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - run: pip install -r requirements-dev.txt
+
+      - name: lint
+        run: ruff check .
+
+      - name: format
+        run: ruff format --check .
+
+      - name: migrations build the schema from nothing
+        run: alembic upgrade head
+
+      - name: tests
+        run: pytest -q
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: format
+        run: npm run format:check
+
+      - name: types
+        run: npm run typecheck
+
+      - name: build
+        run: npm run build
