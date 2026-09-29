@@ -30,18 +30,29 @@ export default function InvoicePage() {
     retry: false,
   });
 
-  if (isPending) return <LoadingPanel label="Loading the invoice" />;
+  if (isPending) {
+    return (
+      <>
+        <PageHeader title="Invoice" />
+        <LoadingPanel label="Loading the invoice" />
+      </>
+    );
+  }
+
   if (error instanceof ApiError && error.status === 404) notFound();
 
   if (error || !invoice) {
     return (
-      <ErrorState
-        title="That invoice could not be loaded"
-        message={error?.message ?? "The record did not come back from the server."}
-        onRetry={() => refetch()}
-        homeHref="/billing"
-        homeLabel="Back to billing"
-      />
+      <>
+        <PageHeader title="Invoice" />
+        <ErrorState
+          title="That invoice could not be loaded"
+          message={error?.message ?? "The record did not come back from the server."}
+          onRetry={() => refetch()}
+          homeHref="/billing"
+          homeLabel="Back to billing"
+        />
+      </>
     );
   }
 

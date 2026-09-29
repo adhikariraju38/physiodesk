@@ -89,6 +89,9 @@ export function Input({ label, error, hint, required, optional, className, ...pr
     >
       <input
         id={id}
+        // password managers rewrite autocomplete on the login form before react
+        // hydrates, which reads as a mismatch even though our markup is stable
+        suppressHydrationWarning
         aria-required={required}
         aria-invalid={error ? true : undefined}
         className={cn(CONTROL_CLASSES, error && "border-danger")}

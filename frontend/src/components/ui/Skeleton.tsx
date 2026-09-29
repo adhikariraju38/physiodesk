@@ -31,7 +31,13 @@ export function Spinner({ className }: { className?: string }) {
 /** Used where a whole card or panel is waiting on its first response. */
 export function LoadingPanel({ label = "Loading" }: { label?: string }) {
   return (
-    <div role="status" aria-live="polite" className="flex justify-center px-5 py-16 text-primary">
+    <div
+      role="status"
+      aria-live="polite"
+      // grows into whatever space the panel was given and centres in it, so the
+      // spinner lands where the content will be rather than at the top of it
+      className="flex min-h-40 flex-1 items-center justify-center px-5 py-10 text-primary"
+    >
       <Spinner className="h-7 w-7" />
       <span className="sr-only">{label}</span>
     </div>

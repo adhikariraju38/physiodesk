@@ -61,13 +61,16 @@ export default function PatientProfilePage() {
 
   if (error || !patient) {
     return (
-      <ErrorState
-        title="That patient could not be loaded"
-        message={error?.message ?? "The record did not come back from the server."}
-        onRetry={() => refetch()}
-        homeHref="/patients"
-        homeLabel="Back to patients"
-      />
+      <>
+        <PageHeader title="Patient" />
+        <ErrorState
+          title="That patient could not be loaded"
+          message={error?.message ?? "The record did not come back from the server."}
+          onRetry={() => refetch()}
+          homeHref="/patients"
+          homeLabel="Back to patients"
+        />
+      </>
     );
   }
 
