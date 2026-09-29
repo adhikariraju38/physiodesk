@@ -33,7 +33,7 @@ export function DataTable<T>({
   fill,
 }: Props<T>) {
   return (
-    <div className={cn("overflow-auto", fill ? "min-h-0 flex-1 overscroll-contain" : "")}>
+    <div className={cn("overflow-auto", fill ? "min-h-0 flex-1 overscroll-y-contain" : "")}>
       <table className="w-full border-collapse text-sm">
         {/* sticky, so the column names stay put while the rows scroll under them */}
         <thead className="sticky top-0 z-10 bg-surface">
@@ -125,7 +125,9 @@ function StatusRow({
 
 export function Toolbar({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-end gap-3 border-b border-border px-5 py-4">
+    // one line on anything wider than a phone, where it stacks rather than
+    // wrapping into a ragged second row
+    <div className="flex shrink-0 flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-end">
       {children}
     </div>
   );

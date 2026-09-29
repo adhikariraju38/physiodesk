@@ -10,7 +10,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             scrolling, so the sidebar never scrolls away with the content */}
         <div className="flex h-screen overflow-hidden">
           <Sidebar />
-          <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+          <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain">
             {children}
           </main>
         </div>

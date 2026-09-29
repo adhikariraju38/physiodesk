@@ -68,7 +68,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
           {description && <p className="mt-0.5 text-sm text-muted">{description}</p>}
         </div>
 
-        <div className="overflow-y-auto overscroll-contain px-5 py-5">{children}</div>
+        <div className="overflow-y-auto overscroll-y-contain px-5 py-5">{children}</div>
 
         {footer && (
           <div className="flex shrink-0 justify-end gap-2 border-t border-border px-5 py-4">

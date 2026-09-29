@@ -42,8 +42,9 @@ html,
 body {
   height: 100%;
   background-color: var(--color-background);
-  /* macos rubber band otherwise pulls the white page behind the app into view */
-  overscroll-behavior: none;
+  /* stops the macos rubber band pulling the white page behind the app into
+     view, without killing the horizontal two finger swipe that goes back */
+  overscroll-behavior-y: none;
 }
 
 body {
