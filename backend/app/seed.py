@@ -20,6 +20,7 @@ from decimal import Decimal
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core import clock
 from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.models.appointment import Appointment
@@ -298,7 +299,7 @@ def run(anchor: date | None = None) -> None:
 
     # keep the wall clock time, so "the sessions earlier today are finished"
     # still holds whichever day the week is anchored to
-    now = datetime.combine(anchor, datetime.now().time()) if anchor else datetime.now()
+    now = datetime.combine(anchor, clock.wall_now().time()) if anchor else clock.wall_now()
 
     with SessionLocal() as db:
         wipe(db)

@@ -32,3 +32,4 @@ tsconfig.tsbuildinfo
 # local scratch and recordings, not part of the source
 *.bak
 *.mov
+.env*

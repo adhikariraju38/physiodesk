@@ -1,4 +1,4 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import AdminUser, CurrentUser, DbSession
+from app.core import clock
 from app.core.pagination import Page, Paging, paginate
 from app.models.appointment import Appointment
 from app.models.enums import InvoiceStatus
@@ -64,7 +65,7 @@ def create_invoice(payload: InvoiceCreate, db: DbSession, admin: AdminUser) -> I
         total=line_total(payload.amount, payload.discount),
         status=payload.status,
         payment_method=payload.payment_method,
-        issued_date=payload.issued_date or date.today(),
+        issued_date=payload.issued_date or clock.today(),
         paid_at=datetime.now(UTC) if payload.status is InvoiceStatus.paid else None,
         created_by_user_id=admin.id,
     )

@@ -4,12 +4,13 @@ The numbers have to agree with the calendar, so on duty and open slots are
 worked out from the same slot builder the scheduling grid uses.
 """
 
-from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core import clock
+from app.core.config import settings
 from app.models.appointment import Appointment
 from app.models.enums import AppointmentStatus, InvoiceStatus
 from app.models.invoice import Invoice
@@ -27,7 +28,7 @@ from app.services.scheduling import day_slots
 
 
 def build_summary(db: Session, recent_limit: int = 5) -> DashboardSummary:
-    now = datetime.now()
+    now = clock.wall_now()
     today = now.date()
 
     therapists = db.scalars(
@@ -56,11 +57,12 @@ def build_summary(db: Session, recent_limit: int = 5) -> DashboardSummary:
     # counted once per patient, and only for sessions that have already started
     seen_today = len({a.patient_id for a in todays_appointments if a.start_time <= now.time()})
 
-    # follows the database timezone, which the api container shares via TZ
+    # paid_at is an instant, stored in utc. read it back in the clinic's zone,
+    # or a payment taken at nine in the morning lands on the day before.
     revenue_today = db.scalar(
         select(func.coalesce(func.sum(Invoice.total), 0)).where(
             Invoice.status == InvoiceStatus.paid,
-            func.date(Invoice.paid_at) == today,
+            func.date(func.timezone(settings.clinic_timezone, Invoice.paid_at)) == today,
         )
     ) or Decimal("0.00")
 

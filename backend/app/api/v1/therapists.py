@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import func, select
 
 from app.api.deps import AdminUser, CurrentUser, DbSession
+from app.core import clock
 from app.models.appointment import Appointment
 from app.models.enums import AppointmentStatus
 from app.models.therapist import Therapist, TherapistOverride, TherapistWorkingDay
@@ -106,7 +107,7 @@ def deactivate_therapist(therapist_id: int, db: DbSession, admin: AdminUser) -> 
         .where(
             Appointment.therapist_id == therapist_id,
             Appointment.status != AppointmentStatus.cancelled,
-            Appointment.appt_date >= date.today(),
+            Appointment.appt_date >= clock.today(),
         )
     )
     if upcoming:

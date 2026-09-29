@@ -5,6 +5,7 @@ from fastapi import APIRouter, Query
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DbSession
+from app.core import clock
 from app.models.appointment import Appointment
 from app.models.enums import AppointmentStatus
 from app.models.therapist import Therapist, TherapistOverride
@@ -22,7 +23,7 @@ def get_day_schedule(
     on_date: Annotated[date | None, Query(alias="date")] = None,
 ) -> DaySchedule:
     """One column per active therapist, with their slots for the chosen day."""
-    day = on_date or date.today()
+    day = on_date or clock.today()
 
     therapists = db.scalars(
         select(Therapist).where(Therapist.is_active.is_(True)).order_by(Therapist.full_name)

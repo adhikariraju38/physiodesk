@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import CurrentUser, DbSession
+from app.core import clock
 from app.models.appointment import Appointment
 from app.models.enums import AppointmentStatus
 from app.models.patient import Patient
@@ -94,7 +95,7 @@ def assert_session_has_started(appointment: Appointment) -> None:
     """
     starts_at = datetime.combine(appointment.appt_date, appointment.start_time)
 
-    if starts_at > datetime.now():
+    if starts_at > clock.wall_now():
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             f"That session is not until {starts_at:%d %b %Y at %H:%M}, so it cannot be "

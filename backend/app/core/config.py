@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     # local dev is plain http, turn this on once there is tls in front
     cookie_secure: bool = False
 
+    # the clinic's own timezone. not taken from the host clock, see core/clock.py
+    clinic_timezone: str = "Asia/Kathmandu"
+
     # where the next.js app runs, needed for credentialed CORS
     frontend_origin: str = "http://localhost:3000"
 
