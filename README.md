@@ -62,9 +62,11 @@ from being anchored to today's date.
   migrations. Four revisions, and the schema builds from nothing with one
   command.
 - **PostgreSQL 16**.
-- **Next.js 15** (App Router) with **TanStack Query** for anything that comes
-  from the api, and **Zustand** for the small amount of screen state that should
-  survive navigating away and back.
+- **Next.js 15** (App Router) with **TanStack Query** for everything that comes
+  from the api, behind one typed table of cache keys so a write invalidates the
+  same lists wherever it was made from. Filters, paging and the calendar date
+  live in the url rather than a client store, so a link opens the view it
+  describes.
 - **Tailwind 4**, with the palette from the brief defined once as theme tokens.
   No hex values in components.
 
@@ -254,3 +256,14 @@ The brief said to make a call, write it down and move on. These are the calls.
   trip before the cell fills in.
 - **Rate limiting on login.** The responses do not leak which emails exist, but
   nothing slows an attacker down.
+
+---
+
+## About this repository
+
+This was built as a take-home assignment for a job application, working from a
+written brief. It is not a product, and nobody is running it in a clinic.
+
+The code is here to be read. If you would like to use any part of it, or you are
+curious about why something was done a particular way, please get in touch first:
+[@adhikariraju38](https://github.com/adhikariraju38).
