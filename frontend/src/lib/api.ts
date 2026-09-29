@@ -15,6 +15,28 @@ export function clearSessionFlag(): void {
   document.cookie = "pd_session=; Max-Age=0; path=/";
 }
 
+let leaving = false;
+
+/**
+ * Give up on the session and send the user to the login page.
+ *
+ * Any request can be the one that discovers the session is gone, not just
+ * /auth/me, so this lives here rather than in the auth context. Returns whether
+ * a navigation actually started.
+ */
+function endSession(): boolean {
+  clearSessionFlag();
+
+  if (typeof window === "undefined" || window.location.pathname === "/login") return false;
+
+  if (!leaving) {
+    leaving = true;
+    // a full navigation, so no stale query cache survives into the next session
+    window.location.href = "/login";
+  }
+  return true;
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -80,9 +102,13 @@ async function request<T>(path: string, init: RequestInit = {}, canRefresh = tru
   if (response.status === 401 && canRefresh && !NO_REFRESH.includes(path)) {
     if (await refreshSession()) return request<T>(path, init, false);
 
-    // the refresh token is gone too, so the flag cookie is lying to the
-    // middleware. drop it, or it will wave the user straight back in.
-    clearSessionFlag();
+    // the refresh token is gone too. leave for the login page rather than
+    // letting "Not authenticated" surface in whichever table asked.
+    if (endSession()) {
+      // the browser is already navigating, so never settle. the caller stays on
+      // its loading state instead of flashing an error on the way out.
+      return new Promise<T>(() => {});
+    }
   }
 
   if (!response.ok) throw new ApiError(response.status, await readError(response));

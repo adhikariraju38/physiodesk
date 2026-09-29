@@ -24,9 +24,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     staleTime: Infinity,
   });
 
-  // the api is the source of truth. if it will not tell us who we are then the
-  // flag cookie the middleware trusted is stale, so clear it first and leave
-  // with a full navigation, otherwise the middleware sends us straight back.
+  // the api client already leaves for the login page when a session is gone.
+  // this only covers /auth/me failing for some other reason, so the shell does
+  // not sit on its spinner forever.
   useEffect(() => {
     if (!isError) return;
     clearSessionFlag();
