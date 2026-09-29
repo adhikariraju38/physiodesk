@@ -25,6 +25,9 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // node, not edge. vercel services does not run edge functions, and this needs
+  // nothing the edge runtime offers.
+  runtime: "nodejs",
   // everything except next's own assets and any file with an extension, so the
   // app icon and friends are not redirected to the login page
   matcher: ["/((?!_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
