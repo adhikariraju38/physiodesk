@@ -11,7 +11,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { StatusPill } from "@/components/ui/Pill";
 import { LoadingPanel } from "@/components/ui/Skeleton";
 import { ApiError, api } from "@/lib/api";
-import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
+import { formatDate, formatDateTime, formatMoney, humanLabel } from "@/lib/format";
 import { keys } from "@/lib/query-keys";
 import type { Invoice } from "@/types/api";
 
@@ -126,7 +126,10 @@ export default function InvoicePage() {
           <div className="mt-8 border-t border-border pt-4 text-sm text-muted">
             {invoice.status === "paid" ? (
               <p>
-                Paid{invoice.payment_method ? ` by ${invoice.payment_method}` : ""}
+                Paid
+                {invoice.payment_method
+                  ? ` by ${humanLabel(invoice.payment_method).toLowerCase()}`
+                  : ""}
                 {invoice.paid_at ? ` on ${formatDateTime(invoice.paid_at)}` : ""}.
               </p>
             ) : invoice.status === "void" ? (

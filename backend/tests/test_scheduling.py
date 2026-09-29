@@ -127,3 +127,38 @@ def test_the_grid_shows_who_is_booked(
     assert column["on_duty"] is True
     assert len(booked) == 1
     assert booked[0]["appointment"]["patient"]["full_name"] == patient.full_name
+
+
+def test_a_session_cannot_be_completed_before_it_happens(
+    client: TestClient, admin: User, patient: Patient, therapist: Therapist
+) -> None:
+    sign_in(client, admin.email, "admin123")
+    booked = client.post("/api/v1/appointments", json=booking(patient, therapist)).json()
+
+    early = client.patch(f"/api/v1/appointments/{booked['id']}", json={"status": "completed"})
+    assert early.status_code == 422
+    assert "not until" in early.json()["detail"]
+
+
+def test_a_session_that_has_started_can_be_completed(
+    client: TestClient, db: Session, admin: User, patient: Patient, therapist: Therapist
+) -> None:
+    sign_in(client, admin.email, "admin123")
+    yesterday = date.today() - timedelta(days=1)
+
+    db.add(
+        Appointment(
+            patient_id=patient.id,
+            therapist_id=therapist.id,
+            appt_date=yesterday,
+            start_time=time(9),
+            end_time=time(10),
+            status=AppointmentStatus.booked,
+        )
+    )
+    db.commit()
+    existing = client.get(f"/api/v1/appointments?date_from={yesterday}").json()[0]
+
+    done = client.patch(f"/api/v1/appointments/{existing['id']}", json={"status": "completed"})
+    assert done.status_code == 200
+    assert done.json()["status"] == "completed"

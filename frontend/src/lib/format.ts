@@ -1,3 +1,8 @@
+/** "no_show" reads as "No show". Used for statuses and for payment methods. */
+export function humanLabel(value: string): string {
+  return value.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+}
+
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 /** Amounts arrive as decimal strings so nothing is lost to float rounding. */

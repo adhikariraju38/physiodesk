@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from datetime import date, time
+from datetime import date, datetime, time
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -86,6 +86,22 @@ def assert_therapist_is_working(
         )
 
 
+def assert_session_has_started(appointment: Appointment) -> None:
+    """A session cannot be marked done before it has happened.
+
+    Without this the front desk can tick off next week's diary, which then
+    counts towards "patients seen today" the moment that day arrives.
+    """
+    starts_at = datetime.combine(appointment.appt_date, appointment.start_time)
+
+    if starts_at > datetime.now():
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            f"That session is not until {starts_at:%d %b %Y at %H:%M}, so it cannot be "
+            "marked completed yet",
+        )
+
+
 def commit_or_conflict(db: DbSession, therapist: Therapist) -> None:
     """Commit, turning a slot collision from the unique index into a clean 409."""
     try:
@@ -168,6 +184,9 @@ def update_appointment(
 
     for field, value in changes.items():
         setattr(appointment, field, value)
+
+    if appointment.status is AppointmentStatus.completed:
+        assert_session_has_started(appointment)
 
     therapist = get_bookable_therapist(db, appointment.therapist_id)
 

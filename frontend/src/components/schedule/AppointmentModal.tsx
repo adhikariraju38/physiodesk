@@ -12,7 +12,7 @@ import { StatusPill } from "@/components/ui/Pill";
 import { Select } from "@/components/ui/Select";
 import { LoadingPanel } from "@/components/ui/Skeleton";
 import { ApiError, api } from "@/lib/api";
-import { formatDate, formatTime } from "@/lib/format";
+import { formatDate, formatTime, humanLabel } from "@/lib/format";
 import { keys } from "@/lib/query-keys";
 import { useInvalidate } from "@/lib/use-invalidate";
 import type { Appointment, DaySchedule } from "@/types/api";
@@ -77,6 +77,11 @@ export function AppointmentModal({ open, onClose, appointmentId }: Props) {
 
   const busy = update.isPending || cancel.isPending;
 
+  // a session in the future has not happened yet, so there is nothing to tick off
+  const hasStarted = appointment
+    ? new Date(`${appointment.appt_date}T${appointment.start_time}`) <= new Date()
+    : false;
+
   return (
     <Modal
       open={open}
@@ -89,6 +94,7 @@ export function AppointmentModal({ open, onClose, appointmentId }: Props) {
             moving={moving}
             busy={busy}
             status={appointment.status}
+            hasStarted={hasStarted}
             canConfirm={Boolean(newStart)}
             onBack={() => setMoving(false)}
             onMove={() => setMoving(true)}
@@ -167,7 +173,11 @@ export function AppointmentModal({ open, onClose, appointmentId }: Props) {
               <StatusPill status={appointment.status} />
             </KeyValue>
             <KeyValue label="Payment">
-              {appointment.payment_method ?? <span className="text-muted">Not recorded</span>}
+              {appointment.payment_method ? (
+                humanLabel(appointment.payment_method)
+              ) : (
+                <span className="text-muted">Not recorded</span>
+              )}
             </KeyValue>
           </dl>
 
@@ -197,6 +207,7 @@ function ActionRow({
   moving,
   busy,
   status,
+  hasStarted,
   canConfirm,
   onBack,
   onMove,
@@ -208,6 +219,7 @@ function ActionRow({
   moving: boolean;
   busy: boolean;
   status: Appointment["status"];
+  hasStarted: boolean;
   canConfirm: boolean;
   onBack: () => void;
   onMove: () => void;
@@ -244,9 +256,11 @@ function ActionRow({
           <Button variant="secondary" onClick={onMove} disabled={busy}>
             Reschedule
           </Button>
-          <Button onClick={onComplete} loading={busy}>
-            Mark completed
-          </Button>
+          {hasStarted && (
+            <Button onClick={onComplete} loading={busy}>
+              Mark completed
+            </Button>
+          )}
         </>
       )}
     </>

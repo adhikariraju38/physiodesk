@@ -1,4 +1,5 @@
 import { cn } from "@/lib/cn";
+import { humanLabel } from "@/lib/format";
 
 /**
  * Status tags only. The primary/secondary/tertiary roles are for structure, so
@@ -34,7 +35,7 @@ export function statusTone(status: string): Tone {
 }
 
 export function statusLabel(status: string): string {
-  return status.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+  return humanLabel(status);
 }
 
 type Props = {
