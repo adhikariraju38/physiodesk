@@ -1,4 +1,7 @@
-const BASE = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/v1`;
+// unset means the api shares our origin, which is how it is deployed: one
+// project, the backend mounted under /api/v1. locally the two are on separate
+// ports and .env.development points at the other one.
+const BASE = `${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/v1`;
 
 /**
  * Endpoints that must never trigger a refresh retry.

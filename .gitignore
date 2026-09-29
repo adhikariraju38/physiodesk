@@ -25,3 +25,10 @@ npm-debug.log*
 full-stack-task.pdf
 next-env.d.ts
 tsconfig.tsbuildinfo
+
+# vercel
+.vercel
+
+# local scratch and recordings, not part of the source
+*.bak
+*.mov
