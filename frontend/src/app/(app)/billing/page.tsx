@@ -87,7 +87,7 @@ export default function BillingPage() {
               </Button>
             )}
             {invoice.status !== "void" && (
-              <Button variant="ghost" size="sm" onClick={() => setVoiding(invoice)}>
+              <Button variant="destructive" size="sm" onClick={() => setVoiding(invoice)}>
                 Void
               </Button>
             )}

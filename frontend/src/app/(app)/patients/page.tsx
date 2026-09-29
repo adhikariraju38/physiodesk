@@ -84,7 +84,7 @@ export default function PatientsPage() {
             <Button variant="secondary" size="sm" onClick={() => setEditing(patient)}>
               Edit
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setRemoving(patient)}>
+            <Button variant="destructive" size="sm" onClick={() => setRemoving(patient)}>
               Delete
             </Button>
           </div>
@@ -108,7 +108,7 @@ export default function PatientsPage() {
               placeholder="Name or phone number"
               value={search}
               onChange={(event) => setFilters({ search: event.target.value })}
-              className="w-full max-w-xs"
+              className="w-full min-w-0 sm:max-w-xs"
             />
             <Select
               label="Status"

@@ -166,7 +166,7 @@ export function OverrideDialog({
                   </span>
                 </span>
                 <Button
-                  variant="ghost"
+                  variant="destructive"
                   size="sm"
                   loading={clear.isPending && clear.variables === row.on_date}
                   onClick={() => clear.mutate(row.on_date)}

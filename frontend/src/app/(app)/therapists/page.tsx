@@ -139,7 +139,7 @@ export default function TherapistsPage() {
               Edit
             </Button>
             {therapist.is_active && (
-              <Button variant="ghost" size="sm" onClick={() => setRemoving(therapist)}>
+              <Button variant="destructive" size="sm" onClick={() => setRemoving(therapist)}>
                 Remove
               </Button>
             )}

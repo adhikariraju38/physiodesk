@@ -238,7 +238,7 @@ function ActionRow({
       </Button>
       {!settled && (
         <>
-          <Button variant="ghost" onClick={onCancel} loading={busy}>
+          <Button variant="destructive" onClick={onCancel} loading={busy}>
             Cancel appointment
           </Button>
           <Button variant="secondary" onClick={onMove} disabled={busy}>
