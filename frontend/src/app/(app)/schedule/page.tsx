@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import { AppointmentModal } from "@/components/schedule/AppointmentModal";
@@ -14,7 +14,7 @@ import { LoadingPanel } from "@/components/ui/Skeleton";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { api } from "@/lib/api";
 import { keys } from "@/lib/query-keys";
-import { useUiStore } from "@/lib/ui-store";
+import { useQueryParams } from "@/lib/use-query-params";
 import { formatDate, toDateInput } from "@/lib/format";
 import type { DaySchedule, ScheduleSlot, TherapistBrief } from "@/types/api";
 
@@ -26,12 +26,14 @@ function shiftDay(date: string, days: number): string {
 
 type Booking = { therapist: TherapistBrief; slot: ScheduleSlot };
 
-export default function SchedulePage() {
+function ScheduleView() {
   const today = toDateInput(new Date());
 
-  // the chosen day follows you around the app rather than snapping back to today
-  const date = useUiStore((state) => state.scheduleDate);
-  const setDate = useUiStore((state) => state.setScheduleDate);
+  // the day is in the url, so a link to a particular date opens on it. today
+  // is the default, so it is left out rather than written in.
+  const { get, set } = useQueryParams();
+  const date = get("date") || today;
+  const setDate = (next: string) => set({ date: next === today ? null : next });
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [viewing, setViewing] = useState<number | null>(null);
@@ -96,5 +98,24 @@ export default function SchedulePage() {
         <AppointmentModal open onClose={() => setViewing(null)} appointmentId={viewing} />
       )}
     </>
+  );
+}
+
+/**
+ * useSearchParams needs a boundary above it, otherwise next cannot prerender
+ * any part of the route.
+ */
+export default function Page() {
+  return (
+    <Suspense
+      fallback={
+        <>
+          <PageHeader title="Schedule" />
+          <LoadingPanel />
+        </>
+      }
+    >
+      <ScheduleView />
+    </Suspense>
   );
 }

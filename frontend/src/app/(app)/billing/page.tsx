@@ -2,7 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 
 import { INVOICE_COLUMNS } from "@/components/billing/columns";
 import { InvoiceForm } from "@/components/billing/InvoiceForm";
@@ -11,13 +11,14 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/Modal";
 import { RefreshButton } from "@/components/ui/RefreshButton";
+import { LoadingPanel } from "@/components/ui/Skeleton";
 import { Select } from "@/components/ui/Select";
 import { type Column, DataTable, TablePagination, Toolbar } from "@/components/ui/Table";
 import { ApiError, api, queryString } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { keys } from "@/lib/query-keys";
-import { useUiStore } from "@/lib/ui-store";
 import { useInvalidate } from "@/lib/use-invalidate";
+import { useQueryParams } from "@/lib/use-query-params";
 import type { Invoice, Page } from "@/types/api";
 
 const PAGE_SIZE = 12;
@@ -29,18 +30,16 @@ const STATUSES = [
   { value: "void", label: "Void", hint: "Cancelled paperwork" },
 ];
 
-export default function BillingPage() {
-  const status = useUiStore((state) => state.invoiceStatus);
-  const setStatus = useUiStore((state) => state.setInvoiceStatus);
-  const [page, setPage] = useState(1);
+function BillingList() {
+  const { get, set } = useQueryParams();
+  const status = get("status");
+  const page = Number(get("page", "1")) || 1;
   const [raising, setRaising] = useState(false);
   const [voiding, setVoiding] = useState<Invoice | null>(null);
   const router = useRouter();
 
   const { isAdmin } = useAuth();
   const invalidate = useInvalidate();
-
-  useEffect(() => setPage(1), [status]);
 
   const { data, isPending, error } = useQuery({
     queryKey: keys.invoices.list({ status, page }),
@@ -110,7 +109,7 @@ export default function BillingPage() {
               label="Status"
               options={STATUSES}
               value={status}
-              onChange={setStatus}
+              onChange={(next) => set({ status: next }, { resetPage: true })}
               className="w-52"
             />
             <div className="ml-auto flex items-center gap-3">
@@ -135,7 +134,7 @@ export default function BillingPage() {
               page={data.page}
               pages={data.pages}
               total={data.total}
-              onChange={setPage}
+              onChange={(next) => set({ page: next })}
             />
           )}
         </Card>
@@ -157,5 +156,24 @@ export default function BillingPage() {
         error={voidInvoice.error instanceof ApiError ? voidInvoice.error.message : null}
       />
     </>
+  );
+}
+
+/**
+ * useSearchParams needs a boundary above it, otherwise next cannot prerender
+ * any part of the route.
+ */
+export default function Page() {
+  return (
+    <Suspense
+      fallback={
+        <>
+          <PageHeader title="Billing" />
+          <LoadingPanel />
+        </>
+      }
+    >
+      <BillingList />
+    </Suspense>
   );
 }

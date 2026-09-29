@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import { OverrideDialog } from "@/components/therapists/OverrideDialog";
@@ -11,12 +11,14 @@ import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/Modal";
 import { Pill } from "@/components/ui/Pill";
 import { RefreshButton } from "@/components/ui/RefreshButton";
+import { LoadingPanel } from "@/components/ui/Skeleton";
 import { Select } from "@/components/ui/Select";
 import { type Column, DataTable, Toolbar } from "@/components/ui/Table";
 import { ApiError, api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { formatTime, formatWorkingDays, toDateInput } from "@/lib/format";
 import { keys } from "@/lib/query-keys";
+import { useQueryParams } from "@/lib/use-query-params";
 import { useInvalidate } from "@/lib/use-invalidate";
 import type { DaySchedule, Therapist } from "@/types/api";
 
@@ -25,11 +27,12 @@ const VISIBILITY = [
   { value: "", label: "Everyone", hint: "Including people who have left" },
 ];
 
-export default function TherapistsPage() {
+function TherapistsRoster() {
   const { isAdmin } = useAuth();
   const invalidate = useInvalidate();
 
-  const [onlyActive, setOnlyActive] = useState("true");
+  const { get, set } = useQueryParams();
+  const onlyActive = get("active", "true");
   const [editing, setEditing] = useState<Therapist | null | undefined>(undefined);
   const [overriding, setOverriding] = useState<Therapist | null>(null);
   const [removing, setRemoving] = useState<Therapist | null>(null);
@@ -162,7 +165,7 @@ export default function TherapistsPage() {
               label="Showing"
               options={VISIBILITY}
               value={onlyActive}
-              onChange={setOnlyActive}
+              onChange={(next) => set({ active: next === "true" ? null : next })}
               className="w-56"
             />
             <div className="ml-auto flex items-center gap-3">
@@ -210,5 +213,24 @@ export default function TherapistsPage() {
         error={deactivate.error instanceof ApiError ? deactivate.error.message : null}
       />
     </>
+  );
+}
+
+/**
+ * useSearchParams needs a boundary above it, otherwise next cannot prerender
+ * any part of the route.
+ */
+export default function Page() {
+  return (
+    <Suspense
+      fallback={
+        <>
+          <PageHeader title="Therapists" />
+          <LoadingPanel />
+        </>
+      }
+    >
+      <TherapistsRoster />
+    </Suspense>
   );
 }

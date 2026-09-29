@@ -2,7 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PATIENT_COLUMNS } from "@/components/patients/columns";
@@ -14,11 +14,12 @@ import { Select } from "@/components/ui/Select";
 import { type Column, DataTable, TablePagination, Toolbar } from "@/components/ui/Table";
 import { ConfirmDialog } from "@/components/ui/Modal";
 import { RefreshButton } from "@/components/ui/RefreshButton";
+import { LoadingPanel } from "@/components/ui/Skeleton";
 import { ApiError, api, queryString } from "@/lib/api";
 import { keys } from "@/lib/query-keys";
-import { useUiStore } from "@/lib/ui-store";
 import { useInvalidate } from "@/lib/use-invalidate";
-import { useDebounced } from "@/lib/use-debounced";
+import { useQueryParams } from "@/lib/use-query-params";
+import { useUrlSearch } from "@/lib/use-url-search";
 import type { Page, Patient } from "@/types/api";
 
 const PAGE_SIZE = 10;
@@ -30,15 +31,14 @@ const STATUSES = [
   { value: "on_hold", label: "On hold" },
 ];
 
-export default function PatientsPage() {
+function PatientsList() {
   const router = useRouter();
 
-  // kept in the ui store so coming back from a patient profile does not wipe
-  // the filters the user set
-  const search = useUiStore((state) => state.patientSearch);
-  const status = useUiStore((state) => state.patientStatus);
-  const setFilters = useUiStore((state) => state.setPatientFilters);
-  const [page, setPage] = useState(1);
+  // the filters and the page live in the url, so a link opens the same view
+  const { get, set } = useQueryParams();
+  const search = useUrlSearch();
+  const status = get("status");
+  const page = Number(get("page", "1")) || 1;
 
   // undefined means the form is closed, null means "add", a patient means "edit"
   const [editing, setEditing] = useState<Patient | null | undefined>(undefined);
@@ -54,18 +54,13 @@ export default function PatientsPage() {
     },
   });
 
-  const debouncedSearch = useDebounced(search);
-
-  // a narrower filter can leave you past the last page, so start over
-  useEffect(() => setPage(1), [debouncedSearch, status]);
-
-  const listKey = keys.patients.list({ search: debouncedSearch, status, page });
+  const listKey = keys.patients.list({ search: search.settled, status, page });
 
   const { data, isPending, error } = useQuery({
     queryKey: listKey,
     queryFn: () =>
       api.get<Page<Patient>>(
-        `/patients${queryString({ search: debouncedSearch, status, page, page_size: PAGE_SIZE })}`,
+        `/patients${queryString({ search: search.settled, status, page, page_size: PAGE_SIZE })}`,
       ),
     // keeps the old rows on screen while the next page loads, instead of flashing empty
     placeholderData: keepPreviousData,
@@ -106,15 +101,15 @@ export default function PatientsPage() {
             <Input
               label="Search"
               placeholder="Name or phone number"
-              value={search}
-              onChange={(event) => setFilters({ search: event.target.value })}
+              value={search.value}
+              onChange={(event) => search.setValue(event.target.value)}
               className="w-full min-w-0 sm:max-w-xs"
             />
             <Select
               label="Status"
               options={STATUSES}
               value={status}
-              onChange={(next) => setFilters({ status: next })}
+              onChange={(next) => set({ status: next }, { resetPage: true })}
               className="w-48"
             />
 
@@ -132,7 +127,7 @@ export default function PatientsPage() {
             isLoading={isPending}
             error={error?.message ?? null}
             emptyMessage={
-              debouncedSearch || status ? "No patients match those filters" : "No patients yet"
+              search.settled || status ? "No patients match those filters" : "No patients yet"
             }
           />
 
@@ -141,7 +136,7 @@ export default function PatientsPage() {
               page={data.page}
               pages={data.pages}
               total={data.total}
-              onChange={setPage}
+              onChange={(next) => set({ page: next })}
             />
           )}
         </Card>
@@ -171,5 +166,24 @@ export default function PatientsPage() {
         error={remove.error instanceof ApiError ? remove.error.message : null}
       />
     </>
+  );
+}
+
+/**
+ * useSearchParams needs a boundary above it, otherwise next cannot prerender
+ * any part of the route.
+ */
+export default function Page() {
+  return (
+    <Suspense
+      fallback={
+        <>
+          <PageHeader title="Patients" />
+          <LoadingPanel />
+        </>
+      }
+    >
+      <PatientsList />
+    </Suspense>
   );
 }
