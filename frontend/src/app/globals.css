@@ -20,9 +20,11 @@
   --color-ink: #1c2622;
   --color-muted: #797365;
 
-  /* status roles, only ever used on tags and badges */
-  --color-success: #4f7c63;
-  --color-success-soft: #e1ebe3;
+  /* status roles, only ever used on tags and badges. the brief reuses tertiary
+     as success, so that is written as a reference rather than the same hex
+     typed twice and drifting later. */
+  --color-success: var(--color-tertiary);
+  --color-success-soft: var(--color-tertiary-soft);
   --color-danger: #b5493b;
   --color-danger-soft: #f3deda;
   --color-neutral: #5e6b78;
